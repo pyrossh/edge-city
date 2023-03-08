@@ -1,0 +1,33 @@
+---
+import { useState } from 'react';
+
+const head = {
+  title: "pyros.sh",
+  description:
+    "Hi there, I'm Peter John, a fullstack dev from Bangalore, India",
+  image: "/favicon.png",
+  keywords: "pyros.sh,pyrossh",
+};
+
+const router = {};
+const [count, setCount] = useState(5);
+---
+
+<div className="home-page">
+  <div>
+    <p>
+      Hello from server path: {router.pathname}
+    </p>
+    <div>
+      <button onClick={() => setCount(count - 1)}>
+        -
+      </button>
+      <div>
+        {count}
+      </div>
+      <button onClick={() => setCount(count + 1)}>
+        +
+      </button>
+    </div>
+  </div>
+</div>
