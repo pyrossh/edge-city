@@ -1,5 +1,6 @@
 ---
 import { useState } from 'react';
+import { useRouter } from '@/router.js';
 
 const head = {
   title: "pyros.sh",
@@ -9,14 +10,14 @@ const head = {
   keywords: "pyros.sh,pyrossh",
 };
 
-const router = {};
+const router = useRouter();
 const [count, setCount] = useState(5);
 ---
 
 <div className="home-page">
   <div>
     <p>
-      Hello from server path: {router.pathname}
+      Hello from server path 123: {router.pathname}
     </p>
     <div>
       <button onClick={() => setCount(count - 1)}>

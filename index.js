@@ -48,6 +48,7 @@ const renderPage = async (filePath, url, params) => {
                 "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
                 "react/jsx-dev-runtime": "https://esm.sh/react@18.2.0/jsx-dev-runtime?dev",
                 "@/utils": "/assets/js/src/utils.js",
+                "@/router.js": "/assets/js/src/router.js",
               }
             }
           )
@@ -93,7 +94,7 @@ export default {
       if (localFile.includes("routes")) {
         result = await transpiler.transform(`
           import { hydrateRoot } from 'react-dom/client';
-          import {RouterProvider} from "@/utils";
+          import {RouterProvider} from "@/router.js";
           import Page from "/dist/js/index.js";
 
           const initialRouteValue = JSON.parse(document.getElementById('initial_route_context').textContent);
