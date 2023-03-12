@@ -1,4 +1,9 @@
 import { plugin } from "bun";
+import path from "path";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import postcss from "postcss"
+import autoprefixer from "autoprefixer";
+import postcssNested from "postcss-nested";
 
 const transpiler = new Bun.Transpiler({
   loader: "jsx",
@@ -9,13 +14,16 @@ const transpiler = new Bun.Transpiler({
 plugin({
   name: "Astro",
   async setup(build) {
-    const { readFileSync, writeFileSync } = await import("fs");
     build.onLoad({ filter: /\.astro$/ }, async (args) => {
+      const folder = path.dirname(args.path).replace(process.cwd(), "");
+      const filename = path.basename(args.path).replace("astro", "js");
+      const outputFolder = path.join(process.cwd(), ".cache", folder);
+      const outputFile = path.join(outputFolder, filename);
       const text = readFileSync(args.path, "utf8");
-      const [_, js, html] = text.split("---");
+      const [_, js, html, css] = text.split("---");
       const imports = js.split("\n").filter((line) => line.startsWith("import")).join("\n");
       const body = js.split("\n").filter((line) => !line.startsWith("import")).join("\n");
-      const code = await transpiler.transform(`
+      const tpl = `
         ${imports}
 
         export default () => {
@@ -25,10 +33,20 @@ plugin({
             ${html}
           );
         }
-      `);
+      `;
+      // console.log('tpl', tpl);
+      const code = await transpiler.transform(tpl);
       // console.log('code', code);
-      writeFileSync("./dist/index.js", code)
-      const src = await import("./dist/index.js");
+      if (!existsSync(outputFolder)) {
+        mkdirSync(outputFolder);
+      }
+      writeFileSync(outputFile, code);
+      if (css) {
+        const result = postcss([autoprefixer, postcssNested])
+          .process(css, { from: 'src/app.css', to: 'dest/app.css' });
+        writeFileSync(path.join(outputFolder, filename.replace("js", "css")), result.css);
+      }
+      const src = await import(outputFile);
       return {
         exports: {
           default: src.default,

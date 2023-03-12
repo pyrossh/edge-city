@@ -1,0 +1,10 @@
+---
+const todos = [{ text: "123" }];
+---
+
+<div className="todo-list">
+  <h1>Todos</h1>
+  <ul>
+    {todos.map((item) => <li key={item.text}>{item.text}</li>)}
+  </ul>
+</div>

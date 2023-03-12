@@ -8,7 +8,12 @@ export const onGet = async (req) => {
     filter: { id },
   });
   const data = JSON.stringify(item);
-  return new Response(data);
+  return new Response(data, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    status: 200,
+  });
 }
 
 export const onPut = async (req) => {

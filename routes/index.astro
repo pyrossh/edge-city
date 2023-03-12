@@ -1,34 +1,31 @@
 ---
-import { useState } from 'react';
-import { useRouter } from '@/router.js';
-
-const head = {
-  title: "pyros.sh",
-  description:
-    "Hi there, I'm Peter John, a fullstack dev from Bangalore, India",
-  image: "/favicon.png",
-  keywords: "pyros.sh,pyrossh",
-};
+import { useState } from "react";
+import { useRouter } from "@/router.js";
+import TodoList from "@/containers/TodoList.astro";
 
 const router = useRouter();
 const [count, setCount] = useState(5);
+// const { data: todos, isLoading, isRevalidating } = usePromise("/todos");
 ---
 
-<div className="home-page">
+<div>
   <div>
     <p>
       Hello from server path 123: {router.pathname}
     </p>
+    <TodoList />
     <div>
-      <button onClick={() => setCount(count - 1)}>
-        -
-      </button>
+      <button onClick={() => setCount(count - 1)}>-</button>
       <div>
         {count}
       </div>
-      <button onClick={() => setCount(count + 1)}>
-        +
-      </button>
+      <button onClick={() => setCount(count + 1)}>+</button>
     </div>
   </div>
 </div>
+
+---
+div {
+  padding: 10px;
+  background-color: yellow;
+}
