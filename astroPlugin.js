@@ -3,7 +3,9 @@ import path from "path";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import postcss from "postcss"
 import autoprefixer from "autoprefixer";
-import postcssNested from "postcss-nested";
+import postcssCustomMedia from "postcss-custom-media";
+// import postcssNormalize from 'postcss-normalize';
+import postcssNesting from "postcss-nesting";
 
 const transpiler = new Bun.Transpiler({
   loader: "jsx",
@@ -42,8 +44,12 @@ plugin({
       }
       writeFileSync(outputFile, code);
       if (css) {
-        const result = postcss([autoprefixer, postcssNested])
-          .process(css, { from: 'src/app.css', to: 'dest/app.css' });
+        const result = postcss([
+          autoprefixer(),
+          postcssCustomMedia(),
+          // postcssNormalize({ browsers: 'last 2 versions' }),
+          postcssNesting(),
+        ]).process(css, { from: 'src/app.css', to: 'dest/app.css' });
         writeFileSync(path.join(outputFolder, filename.replace("js", "css")), result.css);
       }
       const src = await import(outputFile);

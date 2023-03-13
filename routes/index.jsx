@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { useRouter } from "@/router.js";
 import TodoList from "@/containers/TodoList.astro";
+import "index.css";
 
+const { name, title } = props;
 const router = useRouter();
 const [count, setCount] = useState(5);
+// const { data: todos, isLoading, isRevalidating } = usePromise("/todos");
 
 return (
-  <div>
+  <div className="container">
     <div>
       <p>
         Hello from server path 123: {router.pathname}
@@ -21,14 +24,4 @@ return (
       </div>
     </div>
   </div>
-)
-
----
-div {
-  padding: 10px;
-  background-color: yellow;
-
-  & span {
-    color: black;
-  }
-}
+);
