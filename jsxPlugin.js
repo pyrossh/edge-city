@@ -24,9 +24,8 @@ plugin({
       const outputFile = path.join(outputFolder, filename);
       const jsxCode = readFileSync(args.path, "utf8");
       const code = await transpiler.transform(jsxCode);
-      // console.log('code', code);
       if (!existsSync(outputFolder)) {
-        mkdirSync(outputFolder);
+        mkdirSync(outputFolder, { recursive: true });
       }
       writeFileSync(outputFile, code);
       if (existsSync(cssFile)) {

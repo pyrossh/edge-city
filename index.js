@@ -1,8 +1,7 @@
 import './jsxPlugin.js';
 import path from 'path';
-import { SWRConfig } from 'swr';
 import { renderToReadableStream } from 'react-dom/server';
-import { RouterProvider } from './router.js';
+import { routerAtom } from './router.js';
 import packageJson from "./package.json";
 
 const transpiler = new Bun.Transpiler({
@@ -32,15 +31,13 @@ const renderPage = async (filePath, url, params) => {
     pathname: url.pathname,
   }
   console.log('filePath', filePath);
+  routerAtom.update(() => initialRouteValue);
   const routeImport = await import(filePath);
   const Page = routeImport.default;
   const stream = await renderToReadableStream(
     <html lang="en">
       <head>
-        <link rel="stylesheet" href="/pages/index.css" />
-        <script id="initial_route_context" type='application/json' dangerouslySetInnerHTML={{
-          __html: JSON.stringify(initialRouteValue)
-        }} />
+        <link rel="stylesheet" href="/routes/index/page.css" />
         <script type="importmap" dangerouslySetInnerHTML={{
           __html: JSON.stringify(
             {
@@ -49,7 +46,7 @@ const renderPage = async (filePath, url, params) => {
                 "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
                 "react/jsx-dev-runtime": "https://esm.sh/react@18.2.0/jsx-dev-runtime?dev",
                 "@/router.js": "/assets/js/src/router.js",
-                "@/pages/index.jsx": "/pages/index.js",
+                "@/routes/index/page.jsx": "/routes/index/page.js",
                 "@/components/Todo.jsx": "/components/Todo.js",
                 "@/containers/TodoList.jsx": "/containers/TodoList.js"
               }
@@ -59,30 +56,19 @@ const renderPage = async (filePath, url, params) => {
         </script>
         <script type="module" defer dangerouslySetInnerHTML={{
           __html: `
-          import* as JSX from "react/jsx-dev-runtime";
-          var $jsx = JSX.jsxDEV;
+          import React from 'react';
           import { hydrateRoot } from 'react-dom/client';
-          import { SWRConfig } from 'swr';
-          import {RouterProvider} from "@/router.js";
-          import Page from "@/pages/index.jsx";
-      
-          const initialRouteValue = JSON.parse(document.getElementById('initial_route_context').textContent);
-          const root = hydrateRoot(document.getElementById("root"), $jsx(SWRConfig, {
-            value: { suspense: true },
-            children: $jsx(RouterProvider, {
-              value: initialRouteValue,
-              children: $jsx(Page, {}, undefined, false, undefined, this)
-            }, undefined, false, undefined, this)
-          }, undefined, false, undefined, this));
+          import { routerAtom } from "@/router.js";
+          import Page from "@/routes/index/page.jsx";
+
+          routerAtom.update(() => (${JSON.stringify(initialRouteValue)}));
+
+          hydrateRoot(document.getElementById("root"), React.createElement(Page, {}, undefined, false, undefined, this));
         `}}></script>
       </head>
       <body>
         <div id="root">
-          <SWRConfig value={{ suspense: true }}>
-            <RouterProvider value={initialRouteValue}>
-              <Page />
-            </RouterProvider>
-          </SWRConfig>
+          <Page />
         </div>
       </body>
     </html >
@@ -126,15 +112,11 @@ export default {
   port: 3000,
   async fetch(req) {
     const url = new URL(req.url);
-    console.log(req.method, url.pathname)
-    if (url.pathname.includes("/components/") || url.pathname.includes("/containers/") || url.pathname.includes("/pages/")) {
+    if (url.pathname.includes("/components/") || url.pathname.includes("/containers/") || url.pathname.includes("/routes/")) {
       return sendFile(url);
     }
     if (url.pathname.includes("/assets/js")) {
       return renderJs(url);
-    }
-    if (url.pathname.includes("/api")) {
-      return renderApi(url, req);
     }
     if (url.pathname.includes("/favicon")) {
       return new Response(`Not Found`, {
@@ -142,10 +124,12 @@ export default {
         status: 404,
       });
     }
-    return renderPage("./pages/index.jsx", url, {});
-    // const route = router.match(url.pathname);
-    // if (route) {
-    //   return renderPage(route, url);
-    // }
+    if (url.pathname.includes("/")) {
+      return renderPage("./routes/index/page.jsx", url, {});
+    }
+    return new Response(`Not Found`, {
+      headers: { 'Content-Type': 'text/html' },
+      status: 404,
+    });
   },
 };
