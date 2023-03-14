@@ -45,6 +45,7 @@ const renderPage = async (filePath, url, params) => {
                 ...deps,
                 "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
                 "react/jsx-dev-runtime": "https://esm.sh/react@18.2.0/jsx-dev-runtime?dev",
+                "@/atom.js": "/assets/js/src/atom.js",
                 "@/router.js": "/assets/js/src/router.js",
                 "@/routes/index/page.jsx": "/routes/index/page.js",
                 "@/components/Todo.jsx": "/components/Todo.js",
