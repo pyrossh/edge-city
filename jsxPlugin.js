@@ -14,43 +14,30 @@ const transpiler = new Bun.Transpiler({
 });
 
 plugin({
-  name: "Astro",
+  name: "JsxPlugin",
   async setup(build) {
-    build.onLoad({ filter: /\.astro$/ }, async (args) => {
+    build.onLoad({ filter: /\.jsx$/ }, async (args) => {
       const folder = path.dirname(args.path).replace(process.cwd(), "");
-      const filename = path.basename(args.path).replace("astro", "js");
+      const filename = path.basename(args.path).replace("jsx", "js");
+      const cssFile = args.path.replace("jsx", "css");
       const outputFolder = path.join(process.cwd(), ".cache", folder);
       const outputFile = path.join(outputFolder, filename);
-      const text = readFileSync(args.path, "utf8");
-      const [_, js, html, css] = text.split("---");
-      const imports = js.split("\n").filter((line) => line.startsWith("import")).join("\n");
-      const body = js.split("\n").filter((line) => !line.startsWith("import")).join("\n");
-      const tpl = `
-        ${imports}
-
-        export default () => {
-          ${body}
-
-          return (
-            ${html}
-          );
-        }
-      `;
-      // console.log('tpl', tpl);
-      const code = await transpiler.transform(tpl);
+      const jsxCode = readFileSync(args.path, "utf8");
+      const code = await transpiler.transform(jsxCode);
       // console.log('code', code);
       if (!existsSync(outputFolder)) {
         mkdirSync(outputFolder);
       }
       writeFileSync(outputFile, code);
-      if (css) {
+      if (existsSync(cssFile)) {
+        const cssText = readFileSync(cssFile, "utf-8");
         const result = postcss([
           autoprefixer(),
           postcssCustomMedia(),
           // postcssNormalize({ browsers: 'last 2 versions' }),
-          postcssNesting(),
-        ]).process(css, { from: 'src/app.css', to: 'dest/app.css' });
-        writeFileSync(path.join(outputFolder, filename.replace("js", "css")), result.css);
+          postcssNesting,
+        ]).process(cssText);
+        writeFileSync(outputFile.replace("js", "css"), result.css);
       }
       const src = await import(outputFile);
       return {

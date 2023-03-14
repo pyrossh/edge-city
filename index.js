@@ -1,16 +1,9 @@
-import './astroPlugin.js';
+import './jsxPlugin.js';
 import path from 'path';
 import { SWRConfig } from 'swr';
 import { renderToReadableStream } from 'react-dom/server';
 import { RouterProvider } from './router.js';
 import packageJson from "./package.json";
-
-const router = new Bun.FileSystemRouter({
-  style: "nextjs",
-  dir: "./routes",
-  origin: "https://mydomain.com",
-  assetPrefix: "./public"
-});
 
 const transpiler = new Bun.Transpiler({
   loader: "jsx",
@@ -29,7 +22,6 @@ const deps = Object.keys(packageJson.dependencies).reduce((acc, dep) => {
 }, {})
 
 const renderPage = async (filePath, url, params) => {
-  const file = path.basename(url.pathname).replace("astro", "js") + "index.js";
   const query = {};
   for (const key of url.searchParams.keys()) {
     query[key] = url.searchParams.get(key);
@@ -39,13 +31,13 @@ const renderPage = async (filePath, url, params) => {
     params: params,
     pathname: url.pathname,
   }
+  console.log('filePath', filePath);
   const routeImport = await import(filePath);
   const Page = routeImport.default;
   const stream = await renderToReadableStream(
     <html lang="en">
       <head>
-        {/* {routeImport.head()} */}
-        <link rel="stylesheet" href="/routes/index.css" />
+        <link rel="stylesheet" href="/pages/index.css" />
         <script id="initial_route_context" type='application/json' dangerouslySetInnerHTML={{
           __html: JSON.stringify(initialRouteValue)
         }} />
@@ -57,9 +49,9 @@ const renderPage = async (filePath, url, params) => {
                 "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
                 "react/jsx-dev-runtime": "https://esm.sh/react@18.2.0/jsx-dev-runtime?dev",
                 "@/router.js": "/assets/js/src/router.js",
-                "@/routes/index.js": "/routes/index.js",
-                "@/components/Todo.astro": "/components/Todo.js",
-                "@/containers/TodoList.astro": "/containers/TodoList.js"
+                "@/pages/index.jsx": "/pages/index.js",
+                "@/components/Todo.jsx": "/components/Todo.js",
+                "@/containers/TodoList.jsx": "/containers/TodoList.js"
               }
             }
           )
@@ -72,7 +64,7 @@ const renderPage = async (filePath, url, params) => {
           import { hydrateRoot } from 'react-dom/client';
           import { SWRConfig } from 'swr';
           import {RouterProvider} from "@/router.js";
-          import Page from "@/routes/${file}";
+          import Page from "@/pages/index.jsx";
       
           const initialRouteValue = JSON.parse(document.getElementById('initial_route_context').textContent);
           const root = hydrateRoot(document.getElementById("root"), $jsx(SWRConfig, {
@@ -102,29 +94,6 @@ const renderPage = async (filePath, url, params) => {
     status: 200,
   });
 }
-
-// const renderBootstrap = async (url) => {
-//   const folder = path.dirname(url.pathname);
-//   const file = path.basename(url.pathname).replace("astro", "js");
-//   const result = await transpiler.transform(`
-//     import { hydrateRoot } from 'react-dom/client';
-//     import {RouterProvider} from "@/router.js";
-//     import Page from "@/routes/${file}";
-
-//     const initialRouteValue = JSON.parse(document.getElementById('initial_route_context').textContent);
-//     const root = hydrateRoot(document.getElementById('root'), (
-//       <RouterProvider value={initialRouteValue}>
-//         <Page />
-//       </RouterProvider>
-//     ));
-//   `);
-//   return new Response(result, {
-//     headers: {
-//       'Content-Type': 'application/javascript',
-//     },
-//     status: 200,
-//   });
-// }
 
 const renderJs = async (url) => {
   const localFile = url.pathname.replace("/assets/js/", "").replace("src/", "");
@@ -158,7 +127,7 @@ export default {
   async fetch(req) {
     const url = new URL(req.url);
     console.log(req.method, url.pathname)
-    if (url.pathname.includes("/components/") || url.pathname.includes("/containers/") || url.pathname.includes("/routes/")) {
+    if (url.pathname.includes("/components/") || url.pathname.includes("/containers/") || url.pathname.includes("/pages/")) {
       return sendFile(url);
     }
     if (url.pathname.includes("/assets/js")) {
@@ -173,7 +142,7 @@ export default {
         status: 404,
       });
     }
-    return renderPage("./routes/index.astro", url, {});
+    return renderPage("./pages/index.jsx", url, {});
     // const route = router.match(url.pathname);
     // if (route) {
     //   return renderPage(route, url);
