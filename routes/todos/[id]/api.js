@@ -1,4 +1,4 @@
-import tigrisDB from "./db.js";
+import tigrisDB from "./db.js.js";
 
 export const todosCollection = tigrisDB.getCollection("todoItems");
 
