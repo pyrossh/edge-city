@@ -2,7 +2,8 @@
   "name": "quickstart",
   "type": "module",
   "scripts": {
-    "dev": "bun --hot main.js"
+    "dev": "bun --hot main.js",
+    "start": "NODE_ENV=production bun main.js"
   },
   "dependencies": {
     "muffinjs": "0.1.0",

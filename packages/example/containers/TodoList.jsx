@@ -5,7 +5,7 @@ const todos = [
   { id: '2', text: "AEQ" }
 ];
 
-export default () => {
+const TodoList = () => {
   return (
     <div className="todo-list">
       <h1>Todos</h1>
@@ -19,3 +19,5 @@ export default () => {
     </div>
   );
 }
+
+export default TodoList;

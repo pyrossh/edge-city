@@ -1,4 +1,4 @@
-export default ({ id, text }) => {
+const Todo = ({ id, text }) => {
   return (
     <div id={id}>
       <p>
@@ -7,3 +7,5 @@ export default ({ id, text }) => {
     </div>
   )
 }
+
+export default Todo;

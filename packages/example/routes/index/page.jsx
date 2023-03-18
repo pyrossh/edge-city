@@ -1,19 +1,17 @@
 import { useState } from "react";
-import { useRouter } from "muffinjs/router.js";
-import TodoList from "@/containers/TodoList.jsx";
-// import "./index.css";
+// import { useRouter } from "muffinjs/router.js";
+import "./page.css";
 
-export default () => {
-  const router = useRouter();
+const HomePage = () => {
+  // const router = useRouter();
   const [count, setCount] = useState(5);
-  // const { data: todos, isLoading, isRevalidating } = usePromise("/todos");
   return (
     <div className="home-page">
       <div>
-        <p>
+        <h1>Home Page</h1>
+        {/* <p>
           Hello from server path 123: {router.pathname}
-        </p>
-        <TodoList />
+        </p> */}
         <div>
           <button onClick={() => setCount(count - 1)}>-</button>
           <span className="count">
@@ -25,3 +23,5 @@ export default () => {
     </div>
   )
 }
+
+export default HomePage;

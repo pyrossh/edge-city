@@ -1,0 +1,3 @@
+[loaders]
+".jsx" = "js"
+".css" = "css"
