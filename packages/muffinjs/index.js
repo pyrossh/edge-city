@@ -1,8 +1,10 @@
 import './jsxPlugin.js';
+import React from 'react';
 import path from 'path';
 import { renderToReadableStream } from 'react-dom/server';
 import { routerAtom } from './router.js';
-import packageJson from "./package.json";
+
+console.log("running in", process.cwd());
 
 const transpiler = new Bun.Transpiler({
   loader: "jsx",
@@ -15,11 +17,6 @@ const renderApi = async (route, req) => {
   console.log('routeImport', routeImport);
 }
 
-const deps = Object.keys(packageJson.dependencies).reduce((acc, dep) => {
-  acc[dep] = `https://esm.sh/${dep}@${packageJson.dependencies[dep]}?dev`;
-  return acc;
-}, {})
-
 const renderPage = async (filePath, url, params) => {
   const query = {};
   for (const key of url.searchParams.keys()) {
@@ -30,9 +27,14 @@ const renderPage = async (filePath, url, params) => {
     params: params,
     pathname: url.pathname,
   }
-  console.log('filePath', filePath);
   routerAtom.update(() => initialRouteValue);
   const routeImport = await import(filePath);
+  const packageJson = await import(path.join(process.cwd(), "package.json"));
+  const dependencies = packageJson.default.dependencies;
+  const imports = Object.keys(dependencies).reduce((acc, dep) => {
+    acc[dep] = `https://esm.sh/${dep}@${dependencies[dep]}?dev`;
+    return acc;
+  }, {})
   const Page = routeImport.default;
   const stream = await renderToReadableStream(
     <html lang="en">
@@ -42,7 +44,7 @@ const renderPage = async (filePath, url, params) => {
           __html: JSON.stringify(
             {
               "imports": {
-                ...deps,
+                ...imports,
                 "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
                 "react/jsx-dev-runtime": "https://esm.sh/react@18.2.0/jsx-dev-runtime?dev",
                 "@/atom.js": "/assets/js/src/atom.js",
@@ -126,7 +128,7 @@ export default {
       });
     }
     if (url.pathname.includes("/")) {
-      return renderPage("./routes/index/page.jsx", url, {});
+      return renderPage(process.cwd() + "/routes/index/page.jsx", url, {});
     }
     return new Response(`Not Found`, {
       headers: { 'Content-Type': 'text/html' },

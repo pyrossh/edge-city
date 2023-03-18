@@ -1,24 +1,8 @@
 {
-  "name": "quickstart",
-  "module": "index.js",
-  "type": "module",
+  "name": "my-project",
+  "version": "1.0.0",
+  "workspaces": ["packages/example", "packages/muffinjs"],
   "scripts": {
-    "dev": "bun --hot index.js",
-    "start": "bun index.js"
-  },
-  "devDependencies": {
-    "bun-types": "^0.5.0"
-  },
-  "dependencies": {
-    "@blueprintjs/core": "^4.17.6",
-    "autoprefixer": "^10.4.14",
-    "postcss": "^8.4.21",
-    "postcss-custom-media": "^9.1.2",
-    "postcss-nesting": "^11.2.1",
-    "postcss-normalize": "^10.0.1",
-    "react": "18.2.0",
-    "react-dom": "^18.2.0",
-    "react-streaming": "^0.3.5",
-    "zod": "^3.21.0"
+    "start": "muffin"
   }
 }

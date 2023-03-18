@@ -1,4 +1,4 @@
-import tigrisDB from "./db.js.js";
+import tigrisDB from "./db.js.js.js";
 
 export const todosCollection = tigrisDB.getCollection("todoItems");
 
@@ -17,8 +17,9 @@ export const onGet = async (req) => {
 }
 
 export const onPut = async (req) => {
+  const item = await req.body();
   const updated = await todosCollection.insertOrReplaceOne(item);
-  const data = JSON.stringify(updated);
+  const data = JSON.stringify(updated);``
   return new Response(data, {
     headers: {
       "Content-Type": "application/json",

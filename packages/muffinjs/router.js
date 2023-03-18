@@ -1,10 +1,11 @@
-import { atom, useAtom } from "@/atom.js";
+// import { signal, useSignal } from "@preact/signals-react";
+import { atom, useAtom } from "./atom.js";
 
 export const routerAtom = atom({
   pathname: "/",
   query: {},
   params: {},
-})
+});
 
 export const useRouter = () => useAtom(routerAtom);
 
