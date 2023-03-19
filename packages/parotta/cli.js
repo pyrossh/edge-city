@@ -1,3 +1,5 @@
+#!/usr/bin/env bun --hot
+
 import path from 'path';
 import walkdir from 'walkdir';
 import postcss from "postcss"

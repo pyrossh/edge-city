@@ -1,8 +1,6 @@
 {
-  "name": "my-project",
-  "version": "1.0.0",
   "workspaces": [
     "packages/example",
-    "packages/muffinjs"
+    "packages/parotta"
   ]
 }

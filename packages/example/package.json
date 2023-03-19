@@ -2,13 +2,13 @@
   "name": "quickstart",
   "type": "module",
   "scripts": {
-    "dev": "bun --hot main.js",
-    "start": "NODE_ENV=production bun main.js",
+    "dev": "bunx parotta",
+    "start": "NODE_ENV=production bunx parotta",
     "build": "docker build . -t example",
     "run": "docker run -p 3000:3000 example"
   },
   "dependencies": {
-    "muffinjs": "0.1.0",
+    "parotta": "0.1.0",
     "react": "18.2.0",
     "react-dom": "^18.2.0"
   }
