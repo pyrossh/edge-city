@@ -63,14 +63,47 @@ const mapDeps = (dir) => {
     }, {});
 }
 
+const hydrateScript = (filePath, initialRouteValue) => {
+  return `
+import React from 'react';
+import { hydrateRoot } from 'react-dom/client';
+// import { routerAtom } from "muffinjs/router";
+import Page from "${filePath}";
+
+// routerAtom.update(() => (${JSON.stringify(initialRouteValue)}));
+
+hydrateRoot(document.getElementById("root"), React.createElement(Page, {}, undefined, false, undefined, this));  
+  `;
+}
+
 const radixRouter = createRouter({
   strictTrailingSlash: true,
   routes: mapFiles(),
 });
 
 const renderApi = async (filePath, req) => {
-  const routeImport = await import(route.filePath);
-  console.log('routeImport', routeImport);
+  const routeImport = await import(path.join(process.cwd(), filePath));
+  switch (req.method) {
+    case "HEAD":
+      return routeImport.onHead(req);
+    case "OPTIONS":
+      return routeImport.onOptions(req);
+    case "GET":
+      return routeImport.onGet(req);
+    case "POST":
+      return routeImport.onPost(req);
+    case "PUT":
+      return routeImport.onPut(req);
+    case "PATCH":
+      return routeImport.onPatch(req);
+    case "DELETE":
+      return routeImport.onDelete(req);
+    default:
+      return new Response(`{"message": "route not found"}`, {
+        headers: { 'Content-Type': 'application/json' },
+        status: 404,
+      });
+  }
 }
 
 const renderPage = async (filePath, url, params) => {
@@ -86,29 +119,30 @@ const renderPage = async (filePath, url, params) => {
   routerAtom.update(() => initialRouteValue);
   const routeImport = await import(path.join(process.cwd(), filePath));
   const packageJson = await import(path.join(process.cwd(), "package.json"));
-  const dependencies = packageJson.default.dependencies;
   const devTag = !isProd ? "?dev" : "";
-  const imports = Object.keys(dependencies).reduce((acc, dep) => {
-    acc[dep] = `https://esm.sh/${dep}@${dependencies[dep]}${devTag}`;
+  const nodeDeps = Object.keys(packageJson.default.dependencies).reduce((acc, dep) => {
+    acc[dep] = `https://esm.sh/${dep}@${packageJson.default.dependencies[dep]}${devTag}`;
     return acc;
   }, {})
   const Page = routeImport.default;
   const components = mapDeps("components");
   const containers = mapDeps("containers");
-  const parottaVersion = dependencies["parotta"];
+  const parottaVersion = packageJson.default.dependencies["parotta"];
+  const cssFile = `${filePath.replace("jsx", "css")}`;
   const stream = await renderToReadableStream(
     <html lang="en">
       <head>
-        <link rel="stylesheet" href={`${filePath.replace("jsx", "css")}`} />
+        <link rel="preload" href={cssFile} as="style" />
+        <link rel="stylesheet" href={cssFile} />
         <script type="importmap" dangerouslySetInnerHTML={{
           __html: JSON.stringify(
             {
               "imports": {
-                ...imports,
                 "radix3": `https://esm.sh/radix3`,
                 "react-dom/client": `https://esm.sh/react-dom@18.2.0/client${devTag}`,
                 "react/jsx-dev-runtime": `https://esm.sh/react@18.2.0/jsx-dev-runtime${devTag}`,
                 "parotta/router": `https://esm.sh/parotta@${parottaVersion}`,
+                ...nodeDeps,
                 ...components,
                 ...containers,
               }
@@ -117,16 +151,11 @@ const renderPage = async (filePath, url, params) => {
         }}>
         </script>
         <script type="module" defer dangerouslySetInnerHTML={{
-          __html: `
-          import React from 'react';
-          import { hydrateRoot } from 'react-dom/client';
-          // import { routerAtom } from "muffinjs/router";
-          import Page from "${filePath}";
-
-          // routerAtom.update(() => (${JSON.stringify(initialRouteValue)}));
-
-          hydrateRoot(document.getElementById("root"), React.createElement(Page, {}, undefined, false, undefined, this));
-        `}}></script>
+          __html: hydrateScript(filePath, initialRouteValue)
+        }}></script>
+        <title>
+          Parotta
+        </title>
       </head>
       <body>
         <div id="root">
@@ -210,7 +239,7 @@ export default {
       if (match.file) {
         return sendFile(`/static${match.file}`);
       }
-      if (match.page) {
+      if (match.page && req.headers.get("Accept")?.includes('text/html')) {
         return renderPage(`/routes${match.page}`, url, match.params);
       }
       if (match.api) {
@@ -222,4 +251,11 @@ export default {
       status: 404,
     });
   },
-};
+  // error(error) {
+  //   return new Response(`<pre>${error}\n${error.stack}</pre>`, {
+  //     headers: {
+  //       "Content-Type": "text/html",
+  //     },
+  //   });
+  // },
+}

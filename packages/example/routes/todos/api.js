@@ -1,6 +1,4 @@
-import tigrisDB from "./db.js.js.js";
-
-export const todosCollection = tigrisDB.getCollection("todoItems");
+import { todosCollection } from "@/services/collections";
 
 export const onGet = async (req) => {
   const cursor = todosCollection.findMany({});

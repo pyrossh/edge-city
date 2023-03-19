@@ -1,9 +1,13 @@
-import tigrisDB from "./db.js.js.js.js.js.js.js.js";
+import { todosCollection } from "@/services/collections";
 
-export const todosCollection = tigrisDB.getCollection("todoItems");
+const getId = (req) => {
+  const url = new URL(req.url);
+  const res = new RegExp("/todos/(.*?)$").exec(url.pathname)
+  return res[1];
+}
 
 export const onGet = async (req) => {
-  const { id } = req.params;
+  const id = getId(req);
   const item = await todosCollection.findOne({
     filter: { id },
   });
@@ -19,7 +23,7 @@ export const onGet = async (req) => {
 export const onPut = async (req) => {
   const item = await req.body();
   const updated = await todosCollection.insertOrReplaceOne(item);
-  const data = JSON.stringify(updated);``
+  const data = JSON.stringify(updated);
   return new Response(data, {
     headers: {
       "Content-Type": "application/json",
@@ -29,7 +33,7 @@ export const onPut = async (req) => {
 }
 
 export const onDelete = async (req) => {
-  const { id } = req.params;
+  const id = getId(req);
   const res = await todosCollection.deleteOne({
     filter: { id },
   });
