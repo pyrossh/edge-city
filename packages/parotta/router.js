@@ -1,14 +1,12 @@
-// import { signal, useSignal } from "@preact/signals-react";
-import { createRouter } from 'radix3';
-import { atom, useAtom } from "./atom.js";
+import { signal, useSignal } from "@preact/signals-react";
 
-export const routerAtom = atom({
+export const routerSignal = signal({
   pathname: "/",
   query: {},
   params: {},
 });
 
-export const useRouter = () => useAtom(routerAtom);
+export const useRouter = () => useSignal(routerSignal);
 
 export const push = () => {
 }

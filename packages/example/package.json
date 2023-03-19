@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "dev": "bunx parotta",
-    "start": "NODE_ENV=production bunx parotta",
+    "start": "bunx parotta",
     "build": "docker build . -t example",
     "run": "docker run -p 3000:3000 example"
   },

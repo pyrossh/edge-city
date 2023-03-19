@@ -10,7 +10,7 @@ import postcssNesting from "postcss-nesting";
 import { renderToReadableStream } from 'react-dom/server';
 import { createRouter } from 'radix3';
 import mimeTypes from "mime-types";
-import { routerAtom } from './router.js';
+import { routerSignal } from './router.js';
 
 console.log("running in folder:", path.basename(process.cwd()), "env:", process.env.NODE_ENV);
 // console.log("deleting cache");
@@ -69,10 +69,10 @@ const hydrateScript = (filePath, initialRouteValue) => {
   return `
 import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
-// import { routerAtom } from "muffinjs/router";
+import { routerSignal } from "parotta/router";
 import Page from "${filePath}";
 
-// routerAtom.update(() => (${JSON.stringify(initialRouteValue)}));
+routerSignal.value = ${JSON.stringify(initialRouteValue)};
 
 hydrateRoot(document.getElementById("root"), React.createElement(Page, {}, undefined, false, undefined, this));  
   `;
@@ -118,7 +118,7 @@ const renderPage = async (filePath, url, params) => {
     params: params,
     pathname: url.pathname,
   }
-  routerAtom.update(() => initialRouteValue);
+  routerSignal.value = initialRouteValue;
   const routeImport = await import(path.join(process.cwd(), filePath));
   const packageJson = await import(path.join(process.cwd(), "package.json"));
   const devTag = !isProd ? "?dev" : "";
