@@ -3,7 +3,9 @@
   "type": "module",
   "scripts": {
     "dev": "bun --hot main.js",
-    "start": "NODE_ENV=production bun main.js"
+    "start": "NODE_ENV=production bun main.js",
+    "build": "docker build . -t example",
+    "run": "docker run -p 3000:3000 example"
   },
   "dependencies": {
     "muffinjs": "0.1.0",
