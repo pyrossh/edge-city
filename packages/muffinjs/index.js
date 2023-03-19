@@ -53,15 +53,20 @@ const mapFiles = () => {
   return routes;
 }
 
+const mapDeps = (dir) => {
+  return walkdir.sync(path.join(process.cwd(), dir))
+    .map((s) => s.replace(process.cwd(), ""))
+    .filter((s) => s.includes(".jsx"))
+    .reduce((acc, s) => {
+      acc['@' + s.replace(".jsx", "")] = s
+      return acc;
+    }, {});
+}
+
 const radixRouter = createRouter({
   strictTrailingSlash: true,
   routes: mapFiles(),
 });
-console.log(radixRouter.lookup('/'));
-console.log(radixRouter.lookup('/about'));
-console.log(radixRouter.lookup('/todos'));
-console.log(radixRouter.lookup('/todos/123'));
-console.log(radixRouter.lookup('/robots.txt'));
 
 const renderApi = async (filePath, req) => {
   const routeImport = await import(route.filePath);
@@ -88,7 +93,9 @@ const renderPage = async (filePath, url, params) => {
     return acc;
   }, {})
   const Page = routeImport.default;
-  console.log(filePath)
+  const components = mapDeps("components");
+  const containers = mapDeps("containers");
+  const parottaVersion = dependencies["parotta"];
   const stream = await renderToReadableStream(
     <html lang="en">
       <head>
@@ -101,9 +108,9 @@ const renderPage = async (filePath, url, params) => {
                 "radix3": `https://esm.sh/radix3`,
                 "react-dom/client": `https://esm.sh/react-dom@18.2.0/client${devTag}`,
                 "react/jsx-dev-runtime": `https://esm.sh/react@18.2.0/jsx-dev-runtime${devTag}`,
-                "muffinjs": "https://esm.sh/muffinjs",
-                "@/components/Todo.jsx": "/components/Todo.js",
-                "@/containers/TodoList.jsx": "/containers/TodoList.js"
+                "parotta/router": `https://esm.sh/parotta@${parottaVersion}`,
+                ...components,
+                ...containers,
               }
             }
           )
@@ -113,7 +120,7 @@ const renderPage = async (filePath, url, params) => {
           __html: `
           import React from 'react';
           import { hydrateRoot } from 'react-dom/client';
-          // import { routerAtom } from "muffinjs/router.js";
+          // import { routerAtom } from "muffinjs/router";
           import Page from "${filePath}";
 
           // routerAtom.update(() => (${JSON.stringify(initialRouteValue)}));

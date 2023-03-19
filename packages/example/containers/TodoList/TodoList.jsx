@@ -1,4 +1,4 @@
-import Todo from "@/example/components/Todo.jsx";
+import Todo from "@/components/Todo/Todo";
 
 const todos = [
   { id: '1', text: "123" },
