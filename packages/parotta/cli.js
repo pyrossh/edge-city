@@ -7,23 +7,18 @@ import autoprefixer from "autoprefixer";
 import postcssCustomMedia from "postcss-custom-media";
 // import postcssNormalize from 'postcss-normalize';
 import postcssNesting from "postcss-nesting";
-import { renderToReadableStream } from 'react-dom/server';
 import { createRouter } from 'radix3';
 import mimeTypes from "mime-types";
-import { routerSignal } from './router.js';
+import { renderToReadableStream } from 'react-dom/server';
+// import { renderToStream } from './render';
 
+const version = (await import(path.join(import.meta.dir, "package.json"))).default.version;
+console.log(`parotta v${version}`)
 console.log("running in folder:", path.basename(process.cwd()), "env:", process.env.NODE_ENV);
 // console.log("deleting cache");
 // rmSync(path.join(process.cwd(), ".cache"), { force: true, recursive: true })
 
 const isProd = process.env.NODE_ENV === "production";
-
-const transpiler = new Bun.Transpiler({
-  loader: "jsx",
-  autoImportJSX: true,
-  jsxOptimizationInline: true,
-});
-
 
 const mapFiles = () => {
   const routes = {};
@@ -65,16 +60,21 @@ const mapDeps = (dir) => {
     }, {});
 }
 
-const hydrateScript = (filePath, initialRouteValue) => {
+const removeCwd = (s) => s.replace(process.cwd(), "")
+
+const hydrateScript = (appPath, pagePath, routerProps) => {
   return `
-import React from 'react';
-import { hydrateRoot } from 'react-dom/client';
-import { routerSignal } from "parotta/router";
-import Page from "${filePath}";
+import React from "react";
+import { hydrateRoot } from "react-dom/client";
+import App from "${removeCwd(appPath)}";
+import Page from "${removeCwd(pagePath)}";
 
-routerSignal.value = ${JSON.stringify(initialRouteValue)};
+const routerProps = ${JSON.stringify(routerProps)};
 
-hydrateRoot(document.getElementById("root"), React.createElement(Page, {}, undefined, false, undefined, this));  
+hydrateRoot(document.getElementById("root"), React.createElement(App, {
+  routerProps: routerProps,
+  children: React.createElement(Page, {}),
+}));
   `;
 }
 
@@ -113,23 +113,23 @@ const renderPage = async (filePath, url, params) => {
   for (const key of url.searchParams.keys()) {
     query[key] = url.searchParams.get(key);
   }
-  const initialRouteValue = {
+  const routerProps = {
     query: query,
     params: params,
     pathname: url.pathname,
   }
-  routerSignal.value = initialRouteValue;
-  const routeImport = await import(path.join(process.cwd(), filePath));
+  const appPath = path.join(process.cwd(), "routes", "app.jsx");
+  const pagePath = path.join(process.cwd(), filePath);
   const packageJson = await import(path.join(process.cwd(), "package.json"));
   const devTag = !isProd ? "?dev" : "";
   const nodeDeps = Object.keys(packageJson.default.dependencies).reduce((acc, dep) => {
-    acc[dep] = `https://esm.sh/${dep}@${packageJson.default.dependencies[dep]}${devTag}`;
+    acc[dep] = `https://esm.sh/${dep}@${packageJson.default.dependencies[dep]}`;
     return acc;
   }, {})
-  const Page = routeImport.default;
+  const App = (await import(appPath)).default;
+  const Page = (await import(pagePath)).default;
   const components = mapDeps("components");
   const containers = mapDeps("containers");
-  const parottaVersion = packageJson.default.dependencies["parotta"];
   const cssFile = `${filePath.replace("jsx", "css")}`;
   const stream = await renderToReadableStream(
     <html lang="en">
@@ -141,9 +141,12 @@ const renderPage = async (filePath, url, params) => {
             {
               "imports": {
                 "radix3": `https://esm.sh/radix3`,
-                "react-dom/client": `https://esm.sh/react-dom@18.2.0/client${devTag}`,
-                "react/jsx-dev-runtime": `https://esm.sh/react@18.2.0/jsx-dev-runtime${devTag}`,
-                "parotta/router": `https://esm.sh/parotta@${parottaVersion}`,
+                "react": `https://esm.sh/react@18.2.0`,
+                "react/jsx-dev-runtime": `https://esm.sh/react@18.2.0/jsx-dev-runtime`,
+                "react-dom/client": `https://esm.sh/react-dom@18.2.0/client`,
+                "react-streaming": "https://esm.sh/react-streaming",
+                "parotta/router": `https://esm.sh/parotta@${version}/router.js`,
+                "parotta/error": `https://esm.sh/parotta@${version}/error.js`,
                 ...nodeDeps,
                 ...components,
                 ...containers,
@@ -152,8 +155,8 @@ const renderPage = async (filePath, url, params) => {
           )
         }}>
         </script>
-        <script type="module" defer dangerouslySetInnerHTML={{
-          __html: hydrateScript(filePath, initialRouteValue)
+        <script type="module" defer={true} dangerouslySetInnerHTML={{
+          __html: hydrateScript(appPath, pagePath, routerProps)
         }}></script>
         <title>
           Parotta
@@ -161,11 +164,14 @@ const renderPage = async (filePath, url, params) => {
       </head>
       <body>
         <div id="root">
-          <Page />
+          <App routerProps={routerProps}>
+            <Page />
+          </App>
         </div>
       </body>
     </html >
   );
+  // injectToStream('<script type="module" src="/main.js"></script>', { flush: true });
   return new Response(stream, {
     headers: { 'Content-Type': 'text/html' },
     status: 200,
@@ -193,11 +199,23 @@ const renderCss = async (url) => {
   }
 }
 
-const renderJs = async (url) => {
+const transpiler = new Bun.Transpiler({
+  loader: "jsx",
+  autoImportJSX: true,
+  jsxOptimizationInline: true,
+
+  // TODO
+  // autoImportJSX: false,
+  // jsxOptimizationInline: false,
+});
+
+const renderJs = async (src) => {
   try {
-    const jsText = await Bun.file(path.join(process.cwd(), url.pathname)).text();
+    const jsText = await Bun.file(src).text();
     const result = await transpiler.transform(jsText);
     const js = result.replaceAll(`import"./page.css";`, "");
+    // TODO
+    //.replaceAll("$jsx", "React.createElement");
     return new Response(js, {
       headers: { 'Content-Type': 'application/javascript' },
       status: 200,
@@ -234,8 +252,12 @@ export default {
       return renderCss(url);
     }
     if (url.pathname.endsWith(".js") || url.pathname.endsWith(".jsx")) {
-      return renderJs(url);
+      return renderJs(path.join(process.cwd(), url.pathname));
     }
+    // maybe this is needed
+    // if (url.pathname.startsWith("/parotta/")) {
+    //   return renderJs(path.join(import.meta.dir, url.pathname.replace("/parotta/", "")) + ".js");
+    // }
     const match = radixRouter.lookup(url.pathname);
     if (match) {
       if (match.file) {

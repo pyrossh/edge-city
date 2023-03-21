@@ -4,6 +4,10 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    // TODO these options are not supported
+    "jsx": "react",
+    "jsxFactory": "React.createElement",
+    "jsxImportSource": "react"
   }
 }

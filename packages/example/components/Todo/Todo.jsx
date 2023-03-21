@@ -1,3 +1,5 @@
+import React from 'react';
+
 const Todo = ({ id, text }) => {
   return (
     <div id={id}>
