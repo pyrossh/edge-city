@@ -1,6 +1,6 @@
 import React from 'react';
 import useSWR from "swr";
-import { useRouter } from "parotta/router";
+import { Link, useRouter } from "parotta/router";
 import Counter from "@/components/Counter/Counter";
 import "./page.css";
 
@@ -18,7 +18,7 @@ const HomePage = () => {
         <Counter />
       </div>
       <footer>
-        <a href="/about">About us</a>
+        <Link href="/about">About us</Link>
       </footer>
     </div>
   )

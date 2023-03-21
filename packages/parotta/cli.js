@@ -20,7 +20,7 @@ console.log("running in folder:", path.basename(process.cwd()), "env:", process.
 
 const isProd = process.env.NODE_ENV === "production";
 
-const mapFiles = () => {
+const mapFiles = ({ includeStatic, includeApi }) => {
   const routes = {};
   const dirs = walkdir.sync(path.join(process.cwd(), "routes"))
     .map((s) => s.replace(process.cwd(), "")
@@ -34,19 +34,23 @@ const mapFiles = () => {
       const key = page.route || "/";
       routes[key] = { key: key, page: page.path };
     });
-  dirs.filter((p) => p.includes('api.js'))
-    .map((s) => s.replace(process.cwd(), ""))
-    .map((s) => ({ path: s, route: s.replace("/api.js", "") }))
-    .forEach((api) => {
-      const key = api.route || "/";
-      routes[key] = routes[key] || { key };
-      routes[key].api = api.path;
-    });
-  walkdir.sync(path.join(process.cwd(), "static"))
-    .map((s) => s.replace(process.cwd(), "").replace("/static", ""))
-    .forEach((route) => {
-      routes[route] = { key: route, file: route }
-    });
+  if (includeApi) {
+    dirs.filter((p) => p.includes('api.js'))
+      .map((s) => s.replace(process.cwd(), ""))
+      .map((s) => ({ path: s, route: s.replace("/api.js", "") }))
+      .forEach((api) => {
+        const key = api.route || "/";
+        routes[key] = routes[key] || { key };
+        routes[key].api = api.path;
+      });
+  }
+  if (includeStatic) {
+    walkdir.sync(path.join(process.cwd(), "static"))
+      .map((s) => s.replace(process.cwd(), "").replace("/static", ""))
+      .forEach((route) => {
+        routes[route] = { key: route, file: route }
+      });
+  }
   return routes;
 }
 
@@ -61,6 +65,13 @@ const mapDeps = (dir) => {
 }
 
 const removeCwd = (s) => s.replace(process.cwd(), "")
+const serverSideRoutes = mapFiles({ includeApi: true, includeStatic: true });
+const clientSideRoutes = mapFiles({ includeApi: false, includeStatic: false });
+
+const radixRouter = createRouter({
+  strictTrailingSlash: true,
+  routes: serverSideRoutes,
+});
 
 const hydrateScript = (appPath, pagePath, routerProps) => {
   return `
@@ -78,10 +89,6 @@ hydrateRoot(document.getElementById("root"), React.createElement(App, {
   `;
 }
 
-const radixRouter = createRouter({
-  strictTrailingSlash: true,
-  routes: mapFiles(),
-});
 
 const renderApi = async (filePath, req) => {
   const routeImport = await import(path.join(process.cwd(), filePath));
@@ -114,9 +121,12 @@ const renderPage = async (filePath, url, params) => {
     query[key] = url.searchParams.get(key);
   }
   const routerProps = {
-    query: query,
-    params: params,
-    pathname: url.pathname,
+    routes: clientSideRoutes,
+    state: {
+      query: query,
+      params: params,
+      pathname: url.pathname,
+    },
   }
   const appPath = path.join(process.cwd(), "routes", "app.jsx");
   const pagePath = path.join(process.cwd(), filePath);
@@ -127,7 +137,6 @@ const renderPage = async (filePath, url, params) => {
     return acc;
   }, {})
   const App = (await import(appPath)).default;
-  const Page = (await import(pagePath)).default;
   const components = mapDeps("components");
   const containers = mapDeps("containers");
   const cssFile = `${filePath.replace("jsx", "css")}`;
@@ -142,11 +151,14 @@ const renderPage = async (filePath, url, params) => {
               "imports": {
                 "radix3": `https://esm.sh/radix3`,
                 "react": `https://esm.sh/react@18.2.0`,
+                // TODO: need to remove this
                 "react/jsx-dev-runtime": `https://esm.sh/react@18.2.0/jsx-dev-runtime`,
                 "react-dom/client": `https://esm.sh/react-dom@18.2.0/client`,
                 "react-streaming": "https://esm.sh/react-streaming",
-                "parotta/router": `https://esm.sh/parotta@${version}/router.js`,
-                "parotta/error": `https://esm.sh/parotta@${version}/error.js`,
+                // "parotta/router": `https://esm.sh/parotta@${version}/router.js`,
+                // "parotta/error": `https://esm.sh/parotta@${version}/error.js`,
+                "parotta/router": `/parotta/router.js`,
+                "parotta/error": `/parotta/error.js`,
                 ...nodeDeps,
                 ...components,
                 ...containers,
@@ -165,7 +177,6 @@ const renderPage = async (filePath, url, params) => {
       <body>
         <div id="root">
           <App routerProps={routerProps}>
-            <Page />
           </App>
         </div>
       </body>
@@ -178,15 +189,15 @@ const renderPage = async (filePath, url, params) => {
   });
 }
 
-const renderCss = async (url) => {
+const renderCss = async (src) => {
   try {
-    const cssText = await Bun.file(path.join(process.cwd(), url.pathname)).text();
+    const cssText = await Bun.file(src).text();
     const result = await postcss([
       autoprefixer(),
       postcssCustomMedia(),
       // postcssNormalize({ browsers: 'last 2 versions' }),
       postcssNesting,
-    ]).process(cssText, { from: url.pathname, to: url.pathname });
+    ]).process(cssText, { from: src, to: src });
     return new Response(result.css, {
       headers: { 'Content-Type': 'text/css' },
       status: 200,
@@ -228,10 +239,10 @@ const renderJs = async (src) => {
   }
 }
 
-const sendFile = async (file) => {
+const sendFile = async (src) => {
   try {
-    const contentType = mimeTypes.lookup(file) || "application/octet-stream";
-    const stream = await Bun.file(path.join(process.cwd(), file)).stream();
+    const contentType = mimeTypes.lookup(src) || "application/octet-stream";
+    const stream = await Bun.file(src).stream();
     return new Response(stream, {
       headers: { 'Content-Type': contentType },
       status: 200,
@@ -248,20 +259,21 @@ export default {
   port: 3000,
   async fetch(req) {
     const url = new URL(req.url);
+    console.log("GET", url.pathname);
+    // maybe this is needed
+    if (url.pathname.startsWith("/parotta/")) {
+      return renderJs(path.join(import.meta.dir, url.pathname.replace("/parotta/", "")));
+    }
     if (url.pathname.endsWith(".css")) {
-      return renderCss(url);
+      return renderCss(path.join(process.cwd(), url.pathname));
     }
     if (url.pathname.endsWith(".js") || url.pathname.endsWith(".jsx")) {
       return renderJs(path.join(process.cwd(), url.pathname));
     }
-    // maybe this is needed
-    // if (url.pathname.startsWith("/parotta/")) {
-    //   return renderJs(path.join(import.meta.dir, url.pathname.replace("/parotta/", "")) + ".js");
-    // }
     const match = radixRouter.lookup(url.pathname);
     if (match) {
       if (match.file) {
-        return sendFile(`/static${match.file}`);
+        return sendFile(path.join(process.cwd(), `/static${match.file}`));
       }
       if (match.page && req.headers.get("Accept")?.includes('text/html')) {
         return renderPage(`/routes${match.page}`, url, match.params);
