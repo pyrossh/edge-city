@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import React, { createContext, useContext } from "react";
 
 export const RouterContext = createContext({
   stack: [],
@@ -10,11 +10,10 @@ export const RouterContext = createContext({
 });
 
 export const RouterProvider = ({ value, children }) => {
-  return (
-    <RouterContext.Provider value={value}>
-      {children}
-    </RouterContext.Provider>
-  )
+  return React.createElement(RouterContext.Provider, {
+    value,
+    children,
+  });
 }
 
 export const useRouter = () => {
