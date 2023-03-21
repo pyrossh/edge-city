@@ -11,7 +11,10 @@ export const RouterContext = createContext({
 
 export const RouterProvider = ({ value, children }) => {
   return React.createElement(RouterContext.Provider, {
-    value,
+    value: {
+      stack: [],
+      state: value,
+    },
     children,
   });
 }
