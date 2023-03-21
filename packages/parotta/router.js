@@ -1,26 +1,36 @@
-import { signal, useSignal } from "@preact/signals-react";
+import { createContext, useContext } from "react";
 
-export const routerSignal = signal({
-  pathname: "/",
-  query: {},
-  params: {},
+export const RouterContext = createContext({
+  stack: [],
+  state: {
+    pathname: "",
+    query: {},
+    params: {},
+  }
 });
 
-export const useRouter = () => useSignal(routerSignal);
-
-export const push = () => {
+export const RouterProvider = ({ value, children }) => {
+  return (
+    <RouterContext.Provider value={value}>
+      {children}
+    </RouterContext.Provider>
+  )
 }
 
-export const replace = () => {
+export const useRouter = () => {
+  const ctx = useContext(RouterContext);
+  return {
+    ...ctx.state,
+    push: (path) => {
+    },
+    replace: (path) => {
+    },
+    prefetch: () => {
+    },
+    beforePopState: () => {
+    },
+    back: () => {
+    },
+    reload: () => window.location.reload(),
+  };
 }
-
-export const prefetch = () => {
-}
-
-export const beforePopState = () => {
-}
-
-export const back = () => {
-}
-
-export const reload = () => window.location.reload()

@@ -1,6 +1,6 @@
 {
   "name": "parotta",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "dependencies": {
     "autoprefixer": "^10.4.14",
@@ -10,8 +10,7 @@
     "postcss-nesting": "^11.2.1",
     "postcss-normalize": "^10.0.1",
     "radix3": "^1.0.0",
-    "walkdir": "0.4.1",
-    "@preact/signals-react": "1.2.2"
+    "walkdir": "0.4.1"
   },
   "bin": {
     "parotta": "./cli.js"
