@@ -17,7 +17,7 @@ import { renderToReadableStream } from 'react-dom/server';
 
 const version = (await import(path.join(import.meta.dir, "package.json"))).default.version;
 console.log(`parotta v${version}`)
-console.log("running in folder:", path.basename(process.cwd()), "env:", process.env.NODE_ENV);
+console.log(`running with cwd=${path.basename(process.cwd())} node_env=${process.env.NODE_ENV}`);
 // console.log("deleting cache");
 // rmSync(path.join(process.cwd(), ".cache"), { force: true, recursive: true })
 
@@ -280,16 +280,20 @@ export default {
         return renderApi(`/routes${match.api}`, req);
       }
     }
-    return new Response(`Not Found`, {
-      headers: { 'Content-Type': 'text/html' },
+    if (req.headers.get("Accept")?.includes('text/html')) {
+      return renderPage(`/routes/404/page.jsx`, url, {});
+    }
+    return new Response(`{"message": "not found"}`, {
+      headers: { 'Content-Type': 'application/json' },
       status: 404,
     });
   },
-  // error(error) {
-  //   return new Response(`<pre>${error}\n${error.stack}</pre>`, {
-  //     headers: {
-  //       "Content-Type": "text/html",
-  //     },
-  //   });
-  // },
+  error(error) {
+    console.log("error", error);
+    return new Response(`<pre>${error}\n${error.stack}</pre>`, {
+      headers: {
+        "Content-Type": "text/html",
+      },
+    });
+  },
 }

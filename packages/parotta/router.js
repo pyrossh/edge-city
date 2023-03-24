@@ -2,20 +2,18 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 export const RouterContext = createContext(undefined);
 
+const getRoute = (radixRouter, pathname) => {
+  const matchedPage = radixRouter.lookup(pathname);
+  if (!matchedPage) {
+    return radixRouter.lookup("/404");
+  }
+  return matchedPage;
+}
+
 export const Router = ({ App, history, radixRouter }) => {
-  const [Page, setPage] = useState(radixRouter.lookup(history.location.pathname));
+  const [Page, setPage] = useState(() => getRoute(radixRouter, history.location.pathname));
   useEffect(() => {
-    return history.listen(({ action, location }) => {
-      const matchedPage = radixRouter.lookup(location.pathname);
-      if (!matchedPage) {
-        matchedPage = '/404.jsx';
-        console.log('route not matched');
-        setPage(() => <h1> Not found</h1>);
-      } else {
-        console.log('route match', matchedPage);
-        setPage(matchedPage);
-      }
-    });
+    return history.listen(({ location }) => setPage(getRoute(radixRouter, location.pathname)));
   }, [])
   console.log('Router');
   return React.createElement(RouterContext.Provider, {
