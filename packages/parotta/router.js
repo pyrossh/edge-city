@@ -10,10 +10,26 @@ const getRoute = (radixRouter, pathname) => {
   return matchedPage;
 }
 
+const loadCss = (pathname) => {
+  const href = `/routes${pathname === "/" ? "" : pathname}/page.css`;
+  const isLoaded = Array.from(document.getElementsByTagName("link"))
+    .map((link) => link.href.replace(window.origin, "")).includes(href);
+  if (!isLoaded) {
+    const fileref = document.createElement("link");
+    fileref.rel = "stylesheet";
+    fileref.type = "text/css";
+    fileref.href = href;
+    document.getElementsByTagName("head")[0].appendChild(fileref);
+  }
+}
+
 export const Router = ({ App, history, radixRouter }) => {
   const [Page, setPage] = useState(() => getRoute(radixRouter, history.location.pathname));
   useEffect(() => {
-    return history.listen(({ location }) => setPage(getRoute(radixRouter, location.pathname)));
+    return history.listen(({ location }) => {
+      loadCss(location.pathname);
+      setPage(getRoute(radixRouter, location.pathname));
+    });
   }, [])
   console.log('Router');
   return React.createElement(RouterContext.Provider, {
