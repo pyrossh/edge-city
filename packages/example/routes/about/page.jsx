@@ -1,5 +1,5 @@
 import React from 'react';
-import { useRouter } from "parotta/router";
+import { Link, useRouter } from "parotta/router";
 import "./page.css";
 
 const AboutPage = () => {
@@ -12,6 +12,9 @@ const AboutPage = () => {
           Path: {router.pathname}
         </p>
       </div>
+      <footer>
+        <Link href="/">Back</Link>
+      </footer>
     </div>
   )
 }

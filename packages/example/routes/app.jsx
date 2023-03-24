@@ -1,9 +1,9 @@
 import React, { Suspense } from "react";
 import { SWRConfig } from "swr";
-import { RouterProvider } from "parotta/router";
 import { ErrorBoundary } from "parotta/error";
 
-const App = ({ routerProps, children }) => {
+const App = ({ children }) => {
+  console.log('app');
   return (
     <SWRConfig value={{
       fallback: {
@@ -14,9 +14,7 @@ const App = ({ routerProps, children }) => {
     }}>
       <ErrorBoundary onError={(err) => console.log(err)} fallback={<p>Oops something went wrong</p>}>
         <Suspense fallback={<p>Loading...</p>}>
-          <RouterProvider value={routerProps}>
-            {children}
-          </RouterProvider>
+          {children}
         </Suspense>
       </ErrorBoundary>
     </SWRConfig>

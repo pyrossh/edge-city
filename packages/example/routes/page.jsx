@@ -5,6 +5,7 @@ import Counter from "@/components/Counter/Counter";
 import "./page.css";
 
 const HomePage = () => {
+  console.log('page');
   // const todo = useAsync('123', () => getData());
   const { data } = useSWR(`https://jsonplaceholder.typicode.com/todos/1`);
   const router = useRouter();

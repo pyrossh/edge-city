@@ -1,80 +1,55 @@
-import React, { createContext, useContext, useState, useMemo, useEffect } from "react";
-import { createRouter } from 'radix3';
+import React, { createContext, useContext, useState, useEffect } from "react";
 
-export const RouterContext = createContext({
-  stack: [],
-  state: {
-    pathname: "",
-    query: {},
-    params: {},
-  }
-});
+export const RouterContext = createContext(undefined);
 
-const getBasePath = () => typeof window !== "undefined" ? "" : process.cwd();
-
-export const RouterProvider = ({ value, children }) => {
-  const [path, setPath] = useState(value.state.pathname);
-  const [state, setState] = useState(value.state);
-  const [Page, setPage] = useState();
-  const radixRouter = useMemo(() => createRouter({
-    strictTrailingSlash: true,
-    routes: value.routes,
-  }), [])
+export const Router = ({ App, history, radixRouter }) => {
+  const [Page, setPage] = useState(radixRouter.lookup(history.location.pathname));
   useEffect(() => {
-    window.addEventListener('popstate', function (event) {
-      setPath(location.pathname);
-    }, false);
-  }, [])
-  useEffect(() => {
-    if (path !== value.state.pathname) {
-      let match = radixRouter.lookup(path)
-      if (!match) {
-        match = { page: '/404.jsx' }
+    return history.listen(({ action, location }) => {
+      const matchedPage = radixRouter.lookup(location.pathname);
+      if (!matchedPage) {
+        matchedPage = '/404.jsx';
         console.log('route not matched');
+        setPage(() => <h1> Not found</h1>);
       } else {
-        console.log('route match', match, `${getBasePath()}/routes${match.page}`);
+        console.log('route match', matchedPage);
+        setPage(matchedPage);
       }
-      import(`${getBasePath()}/routes${match.page}`)
-        .then((comp) => {
-          setState({ pathname: path, params: match.params, query: {} });
-          setPage(comp.default);
-        })
-    } else {
-      setState(value.state);
-      setPage(null);
-    }
-  }, [path])
+    });
+  }, [])
+  console.log('Router');
   return React.createElement(RouterContext.Provider, {
-    value: {
-      stack: [],
-      state,
-      setPath,
-    },
-    children: Page || children,
+    value: history,
+    children: React.createElement(App, {
+      children: React.createElement(Page, {})
+    }),
   });
 }
 
 export const useRouter = () => {
-  const ctx = useContext(RouterContext);
+  const history = useContext(RouterContext);
   return {
-    ...ctx.state,
+    pathname: history.location.pathname,
+    query: {},
+    params: {},
     push: (path) => {
+      history.push(path)
     },
     replace: (path) => {
+      history.replace(path)
     },
-    prefetch: () => {
-    },
-    beforePopState: () => {
+    forward: () => {
+      history.forward();
     },
     back: () => {
+      history.back();
     },
     reload: () => window.location.reload(),
   };
 }
 
 export const Link = (props) => {
-  const ctx = useContext(RouterContext);
-
+  const router = useRouter();
   return React.createElement("a", {
     ...props,
     onClick: (e) => {
@@ -82,8 +57,7 @@ export const Link = (props) => {
       if (props && props.onClick) {
         props.onClick(e);
       }
-      history.pushState({}, "", props.href);
-      ctx.setPath(props.href)
+      router.push(props.href);
     },
   })
 }

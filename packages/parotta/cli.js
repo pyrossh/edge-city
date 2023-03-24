@@ -1,5 +1,6 @@
 #!/usr/bin/env bun --hot
 
+import React from 'react';
 import path from 'path';
 import walkdir from 'walkdir';
 import postcss from "postcss"
@@ -7,8 +8,10 @@ import autoprefixer from "autoprefixer";
 import postcssCustomMedia from "postcss-custom-media";
 // import postcssNormalize from 'postcss-normalize';
 import postcssNesting from "postcss-nesting";
+import { createMemoryHistory } from "history";
 import { createRouter } from 'radix3';
 import mimeTypes from "mime-types";
+import { Router } from "./router";
 import { renderToReadableStream } from 'react-dom/server';
 // import { renderToStream } from './render';
 
@@ -20,7 +23,7 @@ console.log("running in folder:", path.basename(process.cwd()), "env:", process.
 
 const isProd = process.env.NODE_ENV === "production";
 
-const mapFiles = ({ includeStatic, includeApi }) => {
+const mapFiles = () => {
   const routes = {};
   const dirs = walkdir.sync(path.join(process.cwd(), "routes"))
     .map((s) => s.replace(process.cwd(), "")
@@ -34,23 +37,19 @@ const mapFiles = ({ includeStatic, includeApi }) => {
       const key = page.route || "/";
       routes[key] = { key: key, page: page.path };
     });
-  if (includeApi) {
-    dirs.filter((p) => p.includes('api.js'))
-      .map((s) => s.replace(process.cwd(), ""))
-      .map((s) => ({ path: s, route: s.replace("/api.js", "") }))
-      .forEach((api) => {
-        const key = api.route || "/";
-        routes[key] = routes[key] || { key };
-        routes[key].api = api.path;
-      });
-  }
-  if (includeStatic) {
-    walkdir.sync(path.join(process.cwd(), "static"))
-      .map((s) => s.replace(process.cwd(), "").replace("/static", ""))
-      .forEach((route) => {
-        routes[route] = { key: route, file: route }
-      });
-  }
+  dirs.filter((p) => p.includes('api.js'))
+    .map((s) => s.replace(process.cwd(), ""))
+    .map((s) => ({ path: s, route: s.replace("/api.js", "") }))
+    .forEach((api) => {
+      const key = api.route || "/";
+      routes[key] = routes[key] || { key };
+      routes[key].api = api.path;
+    });
+  walkdir.sync(path.join(process.cwd(), "static"))
+    .map((s) => s.replace(process.cwd(), "").replace("/static", ""))
+    .forEach((route) => {
+      routes[route] = { key: route, file: route }
+    });
   return routes;
 }
 
@@ -64,31 +63,19 @@ const mapDeps = (dir) => {
     }, {});
 }
 
-const removeCwd = (s) => s.replace(process.cwd(), "")
-const serverSideRoutes = mapFiles({ includeApi: true, includeStatic: true });
-const clientSideRoutes = mapFiles({ includeApi: false, includeStatic: false });
+const mapPages = () => walkdir.sync(path.join(process.cwd(), "routes"))
+  .filter((p) => p.includes('page.jsx'))
+  .map((s) => s.replace(process.cwd(), ""))
+  .map((s) => s.replace("/routes", ""))
+  .map((s) => s.replace("/page.jsx", ""));
+
+const serverSideRoutes = mapFiles();
+const clientSideRoutes = mapPages();
 
 const radixRouter = createRouter({
   strictTrailingSlash: true,
   routes: serverSideRoutes,
 });
-
-const hydrateScript = (appPath, pagePath, routerProps) => {
-  return `
-import React from "react";
-import { hydrateRoot } from "react-dom/client";
-import App from "${removeCwd(appPath)}";
-import Page from "${removeCwd(pagePath)}";
-
-const routerProps = ${JSON.stringify(routerProps)};
-
-hydrateRoot(document.getElementById("root"), React.createElement(App, {
-  routerProps: routerProps,
-  children: React.createElement(Page, {}),
-}));
-  `;
-}
-
 
 const renderApi = async (filePath, req) => {
   const routeImport = await import(path.join(process.cwd(), filePath));
@@ -116,33 +103,19 @@ const renderApi = async (filePath, req) => {
 }
 
 const renderPage = async (filePath, url, params) => {
-  const query = {};
-  for (const key of url.searchParams.keys()) {
-    query[key] = url.searchParams.get(key);
-  }
-  const routerProps = {
-    routes: clientSideRoutes,
-    state: {
-      query: query,
-      params: params,
-      pathname: url.pathname,
-    },
-  }
-  const appPath = path.join(process.cwd(), "routes", "app.jsx");
-  const pagePath = path.join(process.cwd(), filePath);
   const packageJson = await import(path.join(process.cwd(), "package.json"));
   const devTag = !isProd ? "?dev" : "";
   const nodeDeps = Object.keys(packageJson.default.dependencies).reduce((acc, dep) => {
     acc[dep] = `https://esm.sh/${dep}@${packageJson.default.dependencies[dep]}`;
     return acc;
   }, {})
-  const App = (await import(appPath)).default;
   const components = mapDeps("components");
   const containers = mapDeps("containers");
   const cssFile = `${filePath.replace("jsx", "css")}`;
   const stream = await renderToReadableStream(
     <html lang="en">
       <head>
+        <title>Parotta</title>
         <link rel="preload" href={cssFile} as="style" />
         <link rel="stylesheet" href={cssFile} />
         <script type="importmap" dangerouslySetInnerHTML={{
@@ -150,11 +123,11 @@ const renderPage = async (filePath, url, params) => {
             {
               "imports": {
                 "radix3": `https://esm.sh/radix3`,
-                "react": `https://esm.sh/react@18.2.0`,
-                // TODO: need to remove this
-                "react/jsx-dev-runtime": `https://esm.sh/react@18.2.0/jsx-dev-runtime`,
-                "react-dom/client": `https://esm.sh/react-dom@18.2.0/client`,
-                "react-streaming": "https://esm.sh/react-streaming",
+                "history": "https://esm.sh/history@5.3.0",
+                "react": `https://esm.sh/react@18.2.0${devTag}`,
+                // TODO: need to remove this in prod
+                "react/jsx-dev-runtime": `https://esm.sh/react@18.2.0${devTag}/jsx-dev-runtime`,
+                "react-dom/client": `https://esm.sh/react-dom@18.2.0${devTag}/client`,
                 // "parotta/router": `https://esm.sh/parotta@${version}/router.js`,
                 // "parotta/error": `https://esm.sh/parotta@${version}/error.js`,
                 "parotta/router": `/parotta/router.js`,
@@ -168,16 +141,41 @@ const renderPage = async (filePath, url, params) => {
         }}>
         </script>
         <script type="module" defer={true} dangerouslySetInnerHTML={{
-          __html: hydrateScript(appPath, pagePath, routerProps)
+          __html: `
+import React from "react";
+import { hydrateRoot } from "react-dom/client";
+import { createBrowserHistory } from "history";
+import { createRouter } from "radix3";
+import { Router } from "parotta/router";
+
+hydrateRoot(document.getElementById("root"), React.createElement(Router, {
+  App: React.lazy(() => import("/routes/app.jsx")),
+  history: createBrowserHistory(),
+  radixRouter: createRouter({
+    strictTrailingSlash: true,
+    routes: {
+      ${clientSideRoutes.map((r) => `"${r === "" ? "/" : r}": React.lazy(() => import("/routes${r === "" ? "" : r}/page.jsx"))`).join(',\n      ')}
+    },
+  }),
+}));
+        `
         }}></script>
-        <title>
-          Parotta
-        </title>
       </head>
       <body>
         <div id="root">
-          <App routerProps={routerProps}>
-          </App>
+          <Router
+            App={React.lazy(() => import(`${process.cwd()}/routes/app.jsx`))}
+            history={createMemoryHistory({
+              initialEntries: [url.pathname + url.search],
+            })}
+            radixRouter={createRouter({
+              strictTrailingSlash: true,
+              routes: clientSideRoutes.reduce((acc, r) => {
+                acc[r === "" ? "/" : r] = React.lazy(() => import(`${process.cwd()}/routes${r === "" ? "" : r}/page.jsx`));
+                return acc
+              }, {})
+            })}
+          />
         </div>
       </body>
     </html >
