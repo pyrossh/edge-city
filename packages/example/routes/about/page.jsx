@@ -2,7 +2,15 @@ import React from 'react';
 import { Link, useRouter } from "parotta/router";
 import "./page.css";
 
-const AboutPage = () => {
+export function Head() {
+  return (
+    <>
+      <title>About us</title>
+    </>
+  )
+}
+
+export default function Page() {
   const router = useRouter();
   return (
     <div className="about-page">
@@ -18,5 +26,3 @@ const AboutPage = () => {
     </div>
   )
 }
-
-export default AboutPage;

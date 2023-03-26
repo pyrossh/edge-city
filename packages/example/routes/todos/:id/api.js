@@ -11,6 +11,14 @@ export const onGet = async (req) => {
   const item = await todosCollection.findOne({
     filter: { id },
   });
+  if (!item) {
+    return new Response(`todo '${id}' not found`, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      status: 404,
+    });
+  }
   const data = JSON.stringify(item);
   return new Response(data, {
     headers: {

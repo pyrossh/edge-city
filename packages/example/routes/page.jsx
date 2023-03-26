@@ -1,13 +1,27 @@
-import React from 'react';
-import useSWR from "swr";
-import { Link, useRouter } from "parotta/router";
+import React, { useEffect } from 'react';
+import { Link, useRouter, useFetch } from "parotta/router";
 import Counter from "@/components/Counter/Counter";
 import "./page.css";
 
-const HomePage = () => {
+export function Head() {
+  const { data } = useFetch("/todos");
+  return (
+    <>
+      <title>Parotta</title>
+    </>
+  )
+}
+
+export default function Page() {
+  const { data, cache } = useFetch("/todos");
   console.log('page');
+  console.log('data', data);
+  useEffect(() => {
+    setTimeout(() => {
+      cache.invalidate(/todos/);
+    }, 3000)
+  }, [])
   // const todo = useAsync('123', () => getData());
-  const { data } = useSWR(`https://jsonplaceholder.typicode.com/todos/1`);
   const router = useRouter();
   return (
     <div className="home-page">
@@ -24,5 +38,3 @@ const HomePage = () => {
     </div>
   )
 }
-
-export default HomePage;

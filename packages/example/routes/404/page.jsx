@@ -1,7 +1,7 @@
 import React from 'react';
 import "./page.css";
 
-const NotFound = () => {
+export default function Page() {
   return (
     <div className="notfound-page">
       <div>
@@ -13,5 +13,3 @@ const NotFound = () => {
     </div>
   )
 }
-
-export default NotFound;

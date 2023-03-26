@@ -112,10 +112,10 @@ const renderPage = async (filePath, url, params) => {
   const components = mapDeps("components");
   const containers = mapDeps("containers");
   const cssFile = `${filePath.replace("jsx", "css")}`;
+  const mainPage = await import(path.join(process.cwd(), filePath));
   const stream = await renderToReadableStream(
     <html lang="en">
       <head>
-        <title>Parotta</title>
         <link rel="preload" href={cssFile} as="style" />
         <link rel="stylesheet" href={cssFile} />
         <script type="importmap" dangerouslySetInnerHTML={{
@@ -140,6 +140,7 @@ const renderPage = async (filePath, url, params) => {
           )
         }}>
         </script>
+        <mainPage.Head />
         <script type="module" defer={true} dangerouslySetInnerHTML={{
           __html: `
 import React from "react";
@@ -180,7 +181,6 @@ hydrateRoot(document.getElementById("root"), React.createElement(Router, {
       </body>
     </html >
   );
-  // injectToStream('<script type="module" src="/main.js"></script>', { flush: true });
   return new Response(stream, {
     headers: { 'Content-Type': 'text/html' },
     status: 200,

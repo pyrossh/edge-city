@@ -1,8 +1,63 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
+
+export const isClient = () => typeof window !== 'undefined';
+export const domain = () => isClient() ? window.origin : "http://0.0.0.0:3000";
+export const globalCache = new Map();
+export const useFetchCache = () => {
+  const [_, rerender] = useState(false);
+  const cache = useMemo(() => globalCache, []);
+  const get = (k) => cache.get(k)
+  const set = (k, v) => {
+    cache.set(k, v);
+    rerender((c) => !c);
+  }
+  const invalidate = (regex) => {
+    Array.from(cache.keys())
+      .filter((k) => regex.test(k))
+      .forEach((k) => {
+        fetchData(k).then((v) => set(k, v));
+      });
+  }
+  return {
+    get,
+    set,
+    invalidate,
+  }
+}
+
+const fetchData = async (route) => {
+  const url = `${domain()}${route}`;
+  console.log('url', url);
+  const res = await fetch(url, {
+    headers: {
+      "Accept": "application/json",
+    },
+  });
+  if (res.ok) {
+    return await res.json();
+  } else {
+    return new Error(await res.text());
+  }
+}
+
+export const useFetch = (url) => {
+  const cache = useFetchCache();
+  const value = cache.get(url);
+  if (value) {
+    if (value instanceof Promise) {
+      throw value;
+    } else if (value instanceof Error) {
+      throw value;
+    }
+    return { data: value, cache };
+  }
+  cache.set(url, fetchData(url).then((v) => cache.set(url, v)));
+  throw cache.get(url);
+}
 
 export const RouterContext = createContext(undefined);
 
-const getRoute = (radixRouter, pathname) => {
+const getMatch = (radixRouter, pathname) => {
   const matchedPage = radixRouter.lookup(pathname);
   if (!matchedPage) {
     return radixRouter.lookup("/404");
@@ -24,40 +79,35 @@ const loadCss = (pathname) => {
 }
 
 export const Router = ({ App, history, radixRouter }) => {
-  const [Page, setPage] = useState(() => getRoute(radixRouter, history.location.pathname));
+  const [MatchedPage, setMatchedPage] = useState(() => getMatch(radixRouter, history.location.pathname));
   useEffect(() => {
     return history.listen(({ location }) => {
       loadCss(location.pathname);
-      setPage(getRoute(radixRouter, location.pathname));
+      setMatchedPage(getMatch(radixRouter, location.pathname));
     });
   }, [])
   console.log('Router');
   return React.createElement(RouterContext.Provider, {
-    value: history,
+    value: {
+      history: history,
+      params: MatchedPage.params || {},
+    },
     children: React.createElement(App, {
-      children: React.createElement(Page, {})
+      children: React.createElement(MatchedPage, {})
     }),
   });
 }
 
 export const useRouter = () => {
-  const history = useContext(RouterContext);
+  const { history, params } = useContext(RouterContext);
   return {
     pathname: history.location.pathname,
-    query: {},
-    params: {},
-    push: (path) => {
-      history.push(path)
-    },
-    replace: (path) => {
-      history.replace(path)
-    },
-    forward: () => {
-      history.forward();
-    },
-    back: () => {
-      history.back();
-    },
+    query: new URLSearchParams(history.location.search),
+    params,
+    push: history.push,
+    replace: history.replace,
+    forward: history.forward,
+    back: history.back,
     reload: () => window.location.reload(),
   };
 }

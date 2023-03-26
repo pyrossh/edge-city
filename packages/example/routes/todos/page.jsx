@@ -1,17 +1,14 @@
 import { Suspense } from "react";
-import { useRouter } from "muffinjs/router.js";
-import TodoList from "@/containers/TodoList/TodoList.jsx";
+import TodoList from "@/containers/TodoList/TodoList";
 // import "./index.css";
 
-const TodosPage = () => {
+export default function Page() {
   return (
     <div className="todos-page">
       <h1>Todos</h1>
-      <Suspense>
+      {/* <Suspense>
         <TodoList todos={todos} />
-      </Suspense>
+      </Suspense> */}
     </div>
   )
 }
-
-export default TodosPage;
