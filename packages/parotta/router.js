@@ -3,7 +3,7 @@ import nProgress from "nprogress";
 
 export const isClient = () => typeof window !== 'undefined';
 export const domain = () => isClient() ? window.origin : "http://0.0.0.0:3000";
-export const basePath = () => isClient() ? "" : process.cwd()
+export const basePath = () => isClient() ? "" : process.cwd();
 export const globalCache = new Map();
 export const useFetchCache = () => {
   const [_, rerender] = useState(false);
@@ -69,35 +69,30 @@ const getMatch = (radixRouter, pathname) => {
 
 const getCssUrl = (pathname) => `/routes${pathname === "/" ? "/page.css" : pathname + "/page.css"}`;
 
-export const Header = ({ history, radixRouter }) => {
-  // const pathname = useSyncExternalStore(history.listen, (v) => v ? v.location.pathname : history.location.pathname, () => history.location.pathname);
-  // const match = getMatch(radixRouter, pathname);
-  const [match, setMatch] = useState(() => getMatch(radixRouter, history.location.pathname));
-  useEffect(() => {
-    return history.listen(({ location }) => {
-      // document.getElementById("pageCss").href = getCssUrl(location.pathname);
-      setMatch(getMatch(radixRouter, location.pathname));
-    });
-  }, []);
-  return React.createElement(React.Suspense, {
+export const Header = ({ history, radixRouter, importMap }) => {
+  const pathname = useSyncExternalStore(history.listen, (v) => v ? v.location.pathname : history.location.pathname, () => history.location.pathname);
+  const match = getMatch(radixRouter, pathname);
+  const initialCss = useMemo(() => getCssUrl(history.location.pathname), []);
+  return React.createElement(React.Fragment, {
     children: [
       React.createElement("link", {
         rel: "stylesheet",
         href: "https://unpkg.com/nprogress@0.2.0/nprogress.css",
       }),
       React.createElement("link", {
-        id: "pageCss",
         rel: "stylesheet",
-        href: "/routes/page.css",
-        // getCssUrl(history.location.pathname)
-      }),
-      React.createElement("link", {
-        rel: "stylesheet",
-        href: "/routes/about/page.css",
+        href: initialCss,
       }),
       React.createElement(React.Suspense, {
         children: React.createElement(match.Head, {}),
       }),
+      React.createElement("script", {
+        id: "importmap",
+        type: "importmap",
+        dangerouslySetInnerHTML: {
+          __html: JSON.stringify({ "imports": importMap }),
+        }
+      })
     ]
   });
 }
@@ -117,10 +112,17 @@ export const Router = ({ App, history, radixRouter }) => {
   const [match, setMatch] = useState(() => getMatch(radixRouter, history.location.pathname));
   useEffect(() => {
     return history.listen(({ location }) => {
-      nProgress.start();
-      startTransition(() => {
-        setMatch(getMatch(radixRouter, location.pathname));
-      })
+      var link = document.createElement('link');
+      link.setAttribute("rel", "stylesheet");
+      link.setAttribute("type", "text/css");
+      link.onload = () => {
+        nProgress.start();
+        startTransition(() => {
+          setMatch(getMatch(radixRouter, location.pathname));
+        })
+      };
+      link.setAttribute("href", getCssUrl(location.pathname));
+      document.getElementsByTagName("head")[0].appendChild(link);
     });
   }, [])
   console.log('Router');

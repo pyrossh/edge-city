@@ -132,6 +132,22 @@ const renderPage = async (url) => {
   }, {})
   const components = mapDeps("components");
   const containers = mapDeps("containers");
+  const importMap = {
+    "radix3": `https://esm.sh/radix3`,
+    "history": "https://esm.sh/history@5.3.0",
+    "react": `https://esm.sh/react@18.2.0${devTag}`,
+    // TODO: need to remove this in prod
+    "react/jsx-dev-runtime": `https://esm.sh/react@18.2.0${devTag}/jsx-dev-runtime`,
+    "react-dom/client": `https://esm.sh/react-dom@18.2.0${devTag}/client`,
+    "nprogress": "https://esm.sh/nprogress@0.2.0",
+    // "parotta/router": `https://esm.sh/parotta@${version}/router.js`,
+    // "parotta/error": `https://esm.sh/parotta@${version}/error.js`,
+    "parotta/router": `/parotta/router.js`,
+    "parotta/error": `/parotta/error.js`,
+    ...nodeDeps,
+    ...components,
+    ...containers,
+  };
   const history = createMemoryHistory({
     initialEntries: [url.pathname + url.search],
   });
@@ -141,6 +157,7 @@ const renderPage = async (url) => {
         <Header
           history={history}
           radixRouter={clientRouter}
+          importMap={importMap}
         />
       </head>
       <body>
@@ -153,29 +170,6 @@ const renderPage = async (url) => {
         </div>
         {config.hydrate &&
           <>
-            <script type="importmap" dangerouslySetInnerHTML={{
-              __html: JSON.stringify(
-                {
-                  "imports": {
-                    "radix3": `https://esm.sh/radix3`,
-                    "history": "https://esm.sh/history@5.3.0",
-                    "react": `https://esm.sh/react@18.2.0${devTag}`,
-                    // TODO: need to remove this in prod
-                    "react/jsx-dev-runtime": `https://esm.sh/react@18.2.0${devTag}/jsx-dev-runtime`,
-                    "react-dom/client": `https://esm.sh/react-dom@18.2.0${devTag}/client`,
-                    "nprogress": "https://esm.sh/nprogress@0.2.0",
-                    // "parotta/router": `https://esm.sh/parotta@${version}/router.js`,
-                    // "parotta/error": `https://esm.sh/parotta@${version}/error.js`,
-                    "parotta/router": `/parotta/router.js`,
-                    "parotta/error": `/parotta/error.js`,
-                    ...nodeDeps,
-                    ...components,
-                    ...containers,
-                  }
-                }
-              )
-            }}>
-            </script>
             <script type="module" defer={true} dangerouslySetInnerHTML={{
               __html: `
 import React from "react";
@@ -258,7 +252,6 @@ const renderJs = async (src) => {
     return new Response(js, {
       headers: {
         'Content-Type': 'application/javascript',
-        // 'Link': `</routes/about/page.css>; rel=prefetch`,
       },
       status: 200,
     });
