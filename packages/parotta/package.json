@@ -6,6 +6,7 @@
     "autoprefixer": "^10.4.14",
     "history": "^5.3.0",
     "mime-types": "2.1.35",
+    "nprogress": "^0.2.0",
     "postcss": "^8.4.21",
     "postcss-custom-media": "^9.1.2",
     "postcss-nesting": "^11.2.1",

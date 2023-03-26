@@ -110,7 +110,7 @@ const renderApi = async (filePath, req) => {
   }
 }
 
-const renderPage = async (filePath, url, params) => {
+const renderPage = async (url) => {
   const packageJson = await import(path.join(process.cwd(), "package.json"));
   const config = packageJson.default.parotta || { hydrate: true };
   const devTag = !isProd ? "?dev" : "";
@@ -132,7 +132,7 @@ const renderPage = async (filePath, url, params) => {
         />
       </head>
       <body>
-        <div id="root">
+        <div id="page">
           <Router
             App={React.lazy(() => import(`${process.cwd()}/routes/app.jsx`))}
             history={history}
@@ -151,6 +151,7 @@ const renderPage = async (filePath, url, params) => {
                     // TODO: need to remove this in prod
                     "react/jsx-dev-runtime": `https://esm.sh/react@18.2.0${devTag}/jsx-dev-runtime`,
                     "react-dom/client": `https://esm.sh/react-dom@18.2.0${devTag}/client`,
+                    "nprogress": "https://esm.sh/nprogress@0.2.0",
                     // "parotta/router": `https://esm.sh/parotta@${version}/router.js`,
                     // "parotta/error": `https://esm.sh/parotta@${version}/error.js`,
                     "parotta/router": `/parotta/router.js`,
@@ -184,7 +185,7 @@ hydrateRoot(document.head, React.createElement(Header, {
   radixRouter,
 }))
 
-hydrateRoot(document.getElementById("root"), React.createElement(Router, {
+hydrateRoot(document.getElementById("page"), React.createElement(Router, {
   App: React.lazy(() => import("/routes/app.jsx")),
   history,
   radixRouter,
@@ -291,14 +292,14 @@ export default {
         return sendFile(path.join(process.cwd(), `/static${match.file}`));
       }
       if (match.page && req.headers.get("Accept")?.includes('text/html')) {
-        return renderPage(`/routes${match.page}`, url, match.params);
+        return renderPage(url);
       }
       if (match.api) {
         return renderApi(`/routes${match.api}`, req);
       }
     }
     if (req.headers.get("Accept")?.includes('text/html')) {
-      return renderPage(`/routes/404/page.jsx`, url, {});
+      return renderPage(url);
     }
     return new Response(`{"message": "not found"}`, {
       headers: { 'Content-Type': 'application/json' },

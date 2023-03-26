@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useSyncExternalStore } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
+import nProgress from "nprogress";
 
 export const isClient = () => typeof window !== 'undefined';
 export const domain = () => isClient() ? window.origin : "http://0.0.0.0:3000";
@@ -69,28 +70,53 @@ const getMatch = (radixRouter, pathname) => {
 const getCssUrl = (pathname) => `/routes${pathname === "/" ? "/page.css" : pathname + "/page.css"}`;
 
 export const Header = ({ history, radixRouter }) => {
-  useEffect(() => {
-    return history.listen(({ location }) => {
-      // document.getElementById("pageCss").href = getCssUrl(location.pathname)
-    });
-  }, []);
+  // useEffect(() => {
+  //   return history.listen(({ location }) => {
+  //     document.getElementById("pageCss").href = getCssUrl(location.pathname)
+  //   });
+  // }, []);
   return React.createElement(React.Suspense, {
     children: [
+      React.createElement("link", {
+        rel: "stylesheet",
+        href: "https://unpkg.com/nprogress@0.2.0/nprogress.css",
+      }),
       React.createElement("link", {
         id: "pageCss",
         rel: "stylesheet",
         href: getCssUrl(history.location.pathname)
+      }),
+      React.createElement("link", {
+        rel: "stylesheet",
+        href: "/routes/about/page.css",
       }),
       React.createElement(React.lazy(() => import(`${basePath()}/routes/page.jsx`).then((js) => ({ default: js.Head }))), {}),
     ]
   });
 }
 
+// export const PP = ({ children }) => {
+//   React.useEffect(() => {
+//     nProgress.done()
+//     return () => {
+//       nProgress.start();
+//     }
+//   }, []);
+//   return children
+// }
+
 export const Router = ({ App, history, radixRouter }) => {
+  // const v = useSyncExternalStore(history.listen, (v) => v, () => history);
+  // console.log('vvv', v);
+  const [, startTransition] = React.useTransition();
   const [MatchedPage, setMatchedPage] = useState(() => getMatch(radixRouter, history.location.pathname));
   useEffect(() => {
     return history.listen(({ location }) => {
-      setMatchedPage(getMatch(radixRouter, location.pathname));
+      nProgress.start();
+      startTransition(() => {
+        // document.getElementById("pageCss").href = getCssUrl(location.pathname);
+        setMatchedPage(getMatch(radixRouter, location.pathname));
+      })
     });
   }, [])
   console.log('Router');
@@ -132,7 +158,7 @@ export const Link = (props) => {
       if (props && props.onClick) {
         props.onClick(e);
       }
-      router.push(props.href);
+      router.push(props.href)
     },
   })
 }
