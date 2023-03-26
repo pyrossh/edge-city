@@ -112,17 +112,27 @@ export const Router = ({ App, history, radixRouter }) => {
   const [match, setMatch] = useState(() => getMatch(radixRouter, history.location.pathname));
   useEffect(() => {
     return history.listen(({ location }) => {
-      var link = document.createElement('link');
-      link.setAttribute("rel", "stylesheet");
-      link.setAttribute("type", "text/css");
-      link.onload = () => {
+      const href = getCssUrl(location.pathname);
+      const isLoaded = Array.from(document.getElementsByTagName("link"))
+        .map((link) => link.href.replace(window.origin, "")).includes(href);
+      if (!isLoaded) {
+        const link = document.createElement('link');
+        link.setAttribute("rel", "stylesheet");
+        link.setAttribute("type", "text/css");
+        link.onload = () => {
+          nProgress.start();
+          startTransition(() => {
+            setMatch(getMatch(radixRouter, location.pathname));
+          })
+        };
+        link.setAttribute("href", href);
+        document.getElementsByTagName("head")[0].appendChild(link);
+      } else {
         nProgress.start();
         startTransition(() => {
           setMatch(getMatch(radixRouter, location.pathname));
         })
-      };
-      link.setAttribute("href", getCssUrl(location.pathname));
-      document.getElementsByTagName("head")[0].appendChild(link);
+      }
     });
   }, [])
   console.log('Router');
