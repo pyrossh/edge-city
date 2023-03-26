@@ -6,9 +6,7 @@ import "./page.css";
 export function Head() {
   const { data } = useFetch("/todos");
   return (
-    <>
-      <title>Parotta</title>
-    </>
+    <title>Parotta</title>
   )
 }
 
@@ -16,12 +14,11 @@ export default function Page() {
   const { data, cache } = useFetch("/todos");
   console.log('page');
   console.log('data', data);
-  useEffect(() => {
-    setTimeout(() => {
-      cache.invalidate(/todos/);
-    }, 3000)
-  }, [])
-  // const todo = useAsync('123', () => getData());
+  // useEffect(() => {
+  //   setTimeout(() => {
+  //     cache.invalidate(/todos/);
+  //   }, 3000)
+  // }, [])
   const router = useRouter();
   return (
     <div className="home-page">

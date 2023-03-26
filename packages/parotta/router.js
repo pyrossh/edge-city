@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo, useSyncExternalStore } from "react";
 
 export const isClient = () => typeof window !== 'undefined';
 export const domain = () => isClient() ? window.origin : "http://0.0.0.0:3000";
+export const basePath = () => isClient() ? "" : process.cwd()
 export const globalCache = new Map();
 export const useFetchCache = () => {
   const [_, rerender] = useState(false);
@@ -65,24 +66,30 @@ const getMatch = (radixRouter, pathname) => {
   return matchedPage;
 }
 
-const loadCss = (pathname) => {
-  const href = `/routes${pathname === "/" ? "" : pathname}/page.css`;
-  const isLoaded = Array.from(document.getElementsByTagName("link"))
-    .map((link) => link.href.replace(window.origin, "")).includes(href);
-  if (!isLoaded) {
-    const fileref = document.createElement("link");
-    fileref.rel = "stylesheet";
-    fileref.type = "text/css";
-    fileref.href = href;
-    document.getElementsByTagName("head")[0].appendChild(fileref);
-  }
+const getCssUrl = (pathname) => `/routes${pathname === "/" ? "/page.css" : pathname + "/page.css"}`;
+
+export const Header = ({ history, radixRouter }) => {
+  useEffect(() => {
+    return history.listen(({ location }) => {
+      // document.getElementById("pageCss").href = getCssUrl(location.pathname)
+    });
+  }, []);
+  return React.createElement(React.Suspense, {
+    children: [
+      React.createElement("link", {
+        id: "pageCss",
+        rel: "stylesheet",
+        href: getCssUrl(history.location.pathname)
+      }),
+      React.createElement(React.lazy(() => import(`${basePath()}/routes/page.jsx`).then((js) => ({ default: js.Head }))), {}),
+    ]
+  });
 }
 
 export const Router = ({ App, history, radixRouter }) => {
   const [MatchedPage, setMatchedPage] = useState(() => getMatch(radixRouter, history.location.pathname));
   useEffect(() => {
     return history.listen(({ location }) => {
-      loadCss(location.pathname);
       setMatchedPage(getMatch(radixRouter, location.pathname));
     });
   }, [])
@@ -93,7 +100,7 @@ export const Router = ({ App, history, radixRouter }) => {
       params: MatchedPage.params || {},
     },
     children: React.createElement(App, {
-      children: React.createElement(MatchedPage, {})
+      children: React.createElement(MatchedPage, {}),
     }),
   });
 }
@@ -116,6 +123,10 @@ export const Link = (props) => {
   const router = useRouter();
   return React.createElement("a", {
     ...props,
+    // onMouseOver: (e) => {
+    //   fetch(`/routes${pathname === "/" ? "" : pathname}/page.css`);
+    //   fetch(`/routes${pathname === "/" ? "" : pathname}/page.jsx`);
+    // },
     onClick: (e) => {
       e.preventDefault();
       if (props && props.onClick) {

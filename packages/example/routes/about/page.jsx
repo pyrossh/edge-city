@@ -4,9 +4,7 @@ import "./page.css";
 
 export function Head() {
   return (
-    <>
-      <title>About us</title>
-    </>
+    <title>About us</title>
   )
 }
 

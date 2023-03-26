@@ -11,7 +11,7 @@ import postcssNesting from "postcss-nesting";
 import { createMemoryHistory } from "history";
 import { createRouter } from 'radix3';
 import mimeTypes from "mime-types";
-import { Router } from "./router";
+import { Header, Router } from "./router";
 import { renderToReadableStream } from 'react-dom/server';
 // import { renderToStream } from './render';
 
@@ -72,9 +72,17 @@ const mapPages = () => walkdir.sync(path.join(process.cwd(), "routes"))
 const serverSideRoutes = mapFiles();
 const clientSideRoutes = mapPages();
 
-const radixRouter = createRouter({
+const serverRouter = createRouter({
   strictTrailingSlash: true,
   routes: serverSideRoutes,
+});
+
+const clientRouter = createRouter({
+  strictTrailingSlash: true,
+  routes: clientSideRoutes.reduce((acc, r) => {
+    acc[r === "" ? "/" : r] = React.lazy(() => import(`${process.cwd()}/routes${r === "" ? "" : r}/page.jsx`));
+    return acc
+  }, {})
 });
 
 const renderApi = async (filePath, req) => {
@@ -104,6 +112,7 @@ const renderApi = async (filePath, req) => {
 
 const renderPage = async (filePath, url, params) => {
   const packageJson = await import(path.join(process.cwd(), "package.json"));
+  const config = packageJson.default.parotta || { hydrate: true };
   const devTag = !isProd ? "?dev" : "";
   const nodeDeps = Object.keys(packageJson.default.dependencies).reduce((acc, dep) => {
     acc[dep] = `https://esm.sh/${dep}@${packageJson.default.dependencies[dep]}`;
@@ -111,73 +120,78 @@ const renderPage = async (filePath, url, params) => {
   }, {})
   const components = mapDeps("components");
   const containers = mapDeps("containers");
-  const cssFile = `${filePath.replace("jsx", "css")}`;
-  const mainPage = await import(path.join(process.cwd(), filePath));
+  const history = createMemoryHistory({
+    initialEntries: [url.pathname + url.search],
+  });
   const stream = await renderToReadableStream(
     <html lang="en">
       <head>
-        <link rel="preload" href={cssFile} as="style" />
-        <link rel="stylesheet" href={cssFile} />
-        <script type="importmap" dangerouslySetInnerHTML={{
-          __html: JSON.stringify(
-            {
-              "imports": {
-                "radix3": `https://esm.sh/radix3`,
-                "history": "https://esm.sh/history@5.3.0",
-                "react": `https://esm.sh/react@18.2.0${devTag}`,
-                // TODO: need to remove this in prod
-                "react/jsx-dev-runtime": `https://esm.sh/react@18.2.0${devTag}/jsx-dev-runtime`,
-                "react-dom/client": `https://esm.sh/react-dom@18.2.0${devTag}/client`,
-                // "parotta/router": `https://esm.sh/parotta@${version}/router.js`,
-                // "parotta/error": `https://esm.sh/parotta@${version}/error.js`,
-                "parotta/router": `/parotta/router.js`,
-                "parotta/error": `/parotta/error.js`,
-                ...nodeDeps,
-                ...components,
-                ...containers,
-              }
-            }
-          )
-        }}>
-        </script>
-        <mainPage.Head />
-        <script type="module" defer={true} dangerouslySetInnerHTML={{
-          __html: `
-import React from "react";
-import { hydrateRoot } from "react-dom/client";
-import { createBrowserHistory } from "history";
-import { createRouter } from "radix3";
-import { Router } from "parotta/router";
-
-hydrateRoot(document.getElementById("root"), React.createElement(Router, {
-  App: React.lazy(() => import("/routes/app.jsx")),
-  history: createBrowserHistory(),
-  radixRouter: createRouter({
-    strictTrailingSlash: true,
-    routes: {
-      ${clientSideRoutes.map((r) => `"${r === "" ? "/" : r}": React.lazy(() => import("/routes${r === "" ? "" : r}/page.jsx"))`).join(',\n      ')}
-    },
-  }),
-}));
-        `
-        }}></script>
+        <Header
+          history={history}
+          radixRouter={clientRouter}
+        />
       </head>
       <body>
         <div id="root">
           <Router
             App={React.lazy(() => import(`${process.cwd()}/routes/app.jsx`))}
-            history={createMemoryHistory({
-              initialEntries: [url.pathname + url.search],
-            })}
-            radixRouter={createRouter({
-              strictTrailingSlash: true,
-              routes: clientSideRoutes.reduce((acc, r) => {
-                acc[r === "" ? "/" : r] = React.lazy(() => import(`${process.cwd()}/routes${r === "" ? "" : r}/page.jsx`));
-                return acc
-              }, {})
-            })}
+            history={history}
+            radixRouter={clientRouter}
           />
         </div>
+        {config.hydrate &&
+          <>
+            <script type="importmap" dangerouslySetInnerHTML={{
+              __html: JSON.stringify(
+                {
+                  "imports": {
+                    "radix3": `https://esm.sh/radix3`,
+                    "history": "https://esm.sh/history@5.3.0",
+                    "react": `https://esm.sh/react@18.2.0${devTag}`,
+                    // TODO: need to remove this in prod
+                    "react/jsx-dev-runtime": `https://esm.sh/react@18.2.0${devTag}/jsx-dev-runtime`,
+                    "react-dom/client": `https://esm.sh/react-dom@18.2.0${devTag}/client`,
+                    // "parotta/router": `https://esm.sh/parotta@${version}/router.js`,
+                    // "parotta/error": `https://esm.sh/parotta@${version}/error.js`,
+                    "parotta/router": `/parotta/router.js`,
+                    "parotta/error": `/parotta/error.js`,
+                    ...nodeDeps,
+                    ...components,
+                    ...containers,
+                  }
+                }
+              )
+            }}>
+            </script>
+            <script type="module" defer={true} dangerouslySetInnerHTML={{
+              __html: `
+import React from "react";
+import { hydrateRoot } from "react-dom/client";
+import { createBrowserHistory } from "history";
+import { createRouter } from "radix3";
+import { Header, Router } from "parotta/router";
+
+const history = createBrowserHistory();
+const radixRouter = createRouter({
+  strictTrailingSlash: true,
+  routes: {
+    ${clientSideRoutes.map((r) => `"${r === "" ? "/" : r}": React.lazy(() => import("/routes${r === "" ? "" : r}/page.jsx"))`).join(',\n      ')}
+  },
+});
+
+hydrateRoot(document.head, React.createElement(Header, {
+  history,
+  radixRouter,
+}))
+
+hydrateRoot(document.getElementById("root"), React.createElement(Router, {
+  App: React.lazy(() => import("/routes/app.jsx")),
+  history,
+  radixRouter,
+}));`}}>
+            </script>
+          </>
+        }
       </body>
     </html >
   );
@@ -226,7 +240,10 @@ const renderJs = async (src) => {
     // TODO
     //.replaceAll("$jsx", "React.createElement");
     return new Response(js, {
-      headers: { 'Content-Type': 'application/javascript' },
+      headers: {
+        'Content-Type': 'application/javascript',
+        // 'Link': `</routes/about/page.css>; rel=prefetch`,
+      },
       status: 200,
     });
   } catch (err) {
@@ -268,7 +285,7 @@ export default {
     if (url.pathname.endsWith(".js") || url.pathname.endsWith(".jsx")) {
       return renderJs(path.join(process.cwd(), url.pathname));
     }
-    const match = radixRouter.lookup(url.pathname);
+    const match = serverRouter.lookup(url.pathname);
     if (match) {
       if (match.file) {
         return sendFile(path.join(process.cwd(), `/static${match.file}`));
