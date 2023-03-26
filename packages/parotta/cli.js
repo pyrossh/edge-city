@@ -77,12 +77,24 @@ const serverRouter = createRouter({
   routes: serverSideRoutes,
 });
 
+const clientRoutes = await clientSideRoutes.reduce((acc, r) => {
+  const Head = import(`${process.cwd()}/routes${r === "" ? "" : r}/page.jsx`);
+  const Page = import(`${process.cwd()}/routes${r === "" ? "" : r}/page.jsx`);
+  acc[r === "" ? "/" : r] = {
+    Head,
+    Page,
+  }
+  return acc
+}, {});
+
+for (const k of Object.keys(clientRoutes)) {
+  clientRoutes[k].Head = (await clientRoutes[k].Head).Head;
+  clientRoutes[k].Page = (await clientRoutes[k].Page).default;
+}
+
 const clientRouter = createRouter({
   strictTrailingSlash: true,
-  routes: clientSideRoutes.reduce((acc, r) => {
-    acc[r === "" ? "/" : r] = React.lazy(() => import(`${process.cwd()}/routes${r === "" ? "" : r}/page.jsx`));
-    return acc
-  }, {})
+  routes: clientRoutes,
 });
 
 const renderApi = async (filePath, req) => {
@@ -176,7 +188,10 @@ const history = createBrowserHistory();
 const radixRouter = createRouter({
   strictTrailingSlash: true,
   routes: {
-    ${clientSideRoutes.map((r) => `"${r === "" ? "/" : r}": React.lazy(() => import("/routes${r === "" ? "" : r}/page.jsx"))`).join(',\n      ')}
+    ${clientSideRoutes.map((r) => `"${r === "" ? "/" : r}": {
+      Head: React.lazy(() => import("/routes${r === "" ? "" : r}/page.jsx").then((js) => ({ default: js.Head }))),
+      Page: React.lazy(() => import("/routes${r === "" ? "" : r}/page.jsx")),
+    }`).join(',\n      ')}
   },
 });
 
