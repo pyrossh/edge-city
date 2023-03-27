@@ -77,7 +77,7 @@ const serverRouter = createRouter({
   routes: serverSideRoutes,
 });
 
-const clientRoutes = await clientSideRoutes.reduce((acc, r) => {
+const clientRoutes = clientSideRoutes.reduce((acc, r) => {
   const Head = import(`${process.cwd()}/routes${r === "" ? "" : r}/page.jsx`);
   const Page = import(`${process.cwd()}/routes${r === "" ? "" : r}/page.jsx`);
   acc[r === "" ? "/" : r] = {
@@ -142,8 +142,10 @@ const renderPage = async (url) => {
     "nprogress": "https://esm.sh/nprogress@0.2.0",
     // "parotta/router": `https://esm.sh/parotta@${version}/router.js`,
     // "parotta/error": `https://esm.sh/parotta@${version}/error.js`,
+    // "parotta/fetch": `https://esm.sh/parotta@${version}/fetch.js`,
     "parotta/router": `/parotta/router.js`,
     "parotta/error": `/parotta/error.js`,
+    "parotta/fetch": `/parotta/fetch.js`,
     ...nodeDeps,
     ...components,
     ...containers,

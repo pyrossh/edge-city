@@ -1,5 +1,6 @@
 import { Suspense } from "react";
-import { Link, useRouter, useFetch } from "parotta/router";
+import { Link, useRouter } from "parotta/router";
+import { useFetch } from "parotta/fetch";
 // import "./index.css";
 
 export default function Page() {

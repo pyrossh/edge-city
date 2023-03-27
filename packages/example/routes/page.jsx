@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { Link, useRouter, useFetch } from "parotta/router";
+import { Link, useRouter } from "parotta/router";
+import { useFetch } from "parotta/fetch";
 import Counter from "@/components/Counter/Counter";
 import "./page.css";
 
@@ -14,11 +15,11 @@ export default function Page() {
   const { data, cache } = useFetch("/todos");
   console.log('page');
   console.log('data', data);
-  // useEffect(() => {
-  //   setTimeout(() => {
-  //     cache.invalidate(/todos/);
-  //   }, 3000)
-  // }, [])
+  useEffect(() => {
+    setTimeout(() => {
+      cache.invalidate(/todos/);
+    }, 3000)
+  }, [])
   const router = useRouter();
   return (
     <div className="home-page">

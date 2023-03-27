@@ -1,62 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useSyncExternalStore } from "react";
 import nProgress from "nprogress";
 
-export const isClient = () => typeof window !== 'undefined';
-export const domain = () => isClient() ? window.origin : "http://0.0.0.0:3000";
-export const basePath = () => isClient() ? "" : process.cwd();
-export const globalCache = new Map();
-export const useFetchCache = () => {
-  const [_, rerender] = useState(false);
-  const cache = useMemo(() => globalCache, []);
-  const get = (k) => cache.get(k)
-  const set = (k, v) => {
-    cache.set(k, v);
-    rerender((c) => !c);
-  }
-  const invalidate = (regex) => {
-    Array.from(cache.keys())
-      .filter((k) => regex.test(k))
-      .forEach((k) => {
-        fetchData(k).then((v) => set(k, v));
-      });
-  }
-  return {
-    get,
-    set,
-    invalidate,
-  }
-}
-
-const fetchData = async (route) => {
-  const url = `${domain()}${route}`;
-  console.log('url', url);
-  const res = await fetch(url, {
-    headers: {
-      "Accept": "application/json",
-    },
-  });
-  if (res.ok) {
-    return await res.json();
-  } else {
-    return new Error(await res.text());
-  }
-}
-
-export const useFetch = (url) => {
-  const cache = useFetchCache();
-  const value = cache.get(url);
-  if (value) {
-    if (value instanceof Promise) {
-      throw value;
-    } else if (value instanceof Error) {
-      throw value;
-    }
-    return { data: value, cache };
-  }
-  cache.set(url, fetchData(url).then((v) => cache.set(url, v)));
-  throw cache.get(url);
-}
-
 export const RouterContext = createContext(undefined);
 
 const getMatch = (radixRouter, pathname) => {
@@ -97,18 +41,8 @@ export const Header = ({ history, radixRouter, importMap }) => {
   });
 }
 
-// export const PP = ({ children }) => {
-//   React.useEffect(() => {
-//     nProgress.done()
-//     return () => {
-//       nProgress.start();
-//     }
-//   }, []);
-//   return children
-// }
-
 export const Router = ({ App, history, radixRouter }) => {
-  const [, startTransition] = React.useTransition();
+  const [isPending, startTransition] = React.useTransition();
   const [match, setMatch] = useState(() => getMatch(radixRouter, history.location.pathname));
   useEffect(() => {
     return history.listen(({ location }) => {
@@ -134,8 +68,13 @@ export const Router = ({ App, history, radixRouter }) => {
         })
       }
     });
-  }, [])
-  console.log('Router');
+  }, []);
+  useEffect(() => {
+    if (!isPending) {
+      nProgress.done();
+    }
+  }, [isPending])
+  console.log('Router', isPending);
   return React.createElement(RouterContext.Provider, {
     value: {
       history: history,
@@ -165,10 +104,11 @@ export const Link = (props) => {
   const router = useRouter();
   return React.createElement("a", {
     ...props,
-    // onMouseOver: (e) => {
-    //   fetch(`/routes${pathname === "/" ? "" : pathname}/page.css`);
-    //   fetch(`/routes${pathname === "/" ? "" : pathname}/page.jsx`);
-    // },
+    onMouseOver: (e) => {
+      // Simple prefetching for now will work only with cache headers
+      fetch(getCssUrl(props.href));
+      fetch(getCssUrl(props.href).replace("css", "jsx"));
+    },
     onClick: (e) => {
       e.preventDefault();
       if (props && props.onClick) {

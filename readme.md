@@ -1,11 +1,10 @@
 # parotta
 
-parotta is a next level meta-framework for react that runs only on the bun js runtime.
-It uses File system routing with SSR with streaming + CSR as the method to render pages. Basically a MPA + SPA Transitional App.
+parotta is a next level meta-framework for react that runs only on edge runtimes mainly bun.
+It uses File System routing with streaming SSR + CSR as the method to render pages. Basically a MPA + SPA Transitional App.
 It is very opionated and has set of idiomatic ways of doing things.
 
 ### Todo
-1. Prefetching assets
-2. Add build step
-3. Deploy to Docker, Deno deploy, Cloudflare workers, Vercel edge functions, Bun edge (whenever it releases)
-4. Hydrate fetch cache
+1. Add build step
+2. Deploy to Docker, Deno deploy, Vercel edge functions, Cloudflare workers, Bun edge (whenever it releases)
+3. Hydrate fetch cache
