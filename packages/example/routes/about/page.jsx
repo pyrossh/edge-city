@@ -2,13 +2,13 @@ import React from 'react';
 import { Link, useRouter } from "parotta/router";
 import "./page.css";
 
-export function Head() {
+export const Head = () => {
   return (
     <title>About us</title>
   )
 }
 
-export default function Page() {
+export const Body = () => {
   const router = useRouter();
   return (
     <div className="about-page">

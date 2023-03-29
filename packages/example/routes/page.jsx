@@ -4,14 +4,14 @@ import { useFetch } from "parotta/fetch";
 import Counter from "@/components/Counter/Counter";
 import "./page.css";
 
-export function Head() {
+export const Head = () => {
   const { data } = useFetch("/todos");
   return (
     <title>Parotta</title>
   )
 }
 
-export default function Page() {
+export const Body = () => {
   const { data, cache } = useFetch("/todos");
   console.log('page');
   console.log('data', data);
@@ -22,7 +22,7 @@ export default function Page() {
   }, [])
   const router = useRouter();
   return (
-    <div className="home-page">
+    <div>
       <div>
         <h1>Home Page</h1>
         <p>

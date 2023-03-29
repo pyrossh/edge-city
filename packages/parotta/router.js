@@ -13,7 +13,7 @@ const getMatch = (radixRouter, pathname) => {
 
 const getCssUrl = (pathname) => `/routes${pathname === "/" ? "/page.css" : pathname + "/page.css"}`;
 
-export const Header = ({ history, radixRouter, importMap }) => {
+export const Head = ({ history, radixRouter, importMap }) => {
   const pathname = useSyncExternalStore(history.listen, (v) => v ? v.location.pathname : history.location.pathname, () => history.location.pathname);
   const match = getMatch(radixRouter, pathname);
   const initialCss = useMemo(() => getCssUrl(history.location.pathname), []);
@@ -24,8 +24,9 @@ export const Header = ({ history, radixRouter, importMap }) => {
         href: "https://unpkg.com/nprogress@0.2.0/nprogress.css",
       }),
       React.createElement("link", {
+        id: "pageCss",
         rel: "stylesheet",
-        href: initialCss,
+        href: getCssUrl(history.location.pathname),
       }),
       React.createElement(React.Suspense, {
         children: React.createElement(match.Head, {}),
@@ -41,32 +42,32 @@ export const Header = ({ history, radixRouter, importMap }) => {
   });
 }
 
-export const Router = ({ App, history, radixRouter }) => {
+export const Body = ({ App, history, radixRouter }) => {
   const [isPending, startTransition] = React.useTransition();
   const [match, setMatch] = useState(() => getMatch(radixRouter, history.location.pathname));
   useEffect(() => {
     return history.listen(({ location }) => {
-      const href = getCssUrl(location.pathname);
-      const isLoaded = Array.from(document.getElementsByTagName("link"))
-        .map((link) => link.href.replace(window.origin, "")).includes(href);
-      if (!isLoaded) {
-        const link = document.createElement('link');
-        link.setAttribute("rel", "stylesheet");
-        link.setAttribute("type", "text/css");
-        link.onload = () => {
-          nProgress.start();
-          startTransition(() => {
-            setMatch(getMatch(radixRouter, location.pathname));
-          })
-        };
-        link.setAttribute("href", href);
-        document.getElementsByTagName("head")[0].appendChild(link);
-      } else {
+      // const href = getCssUrl(location.pathname);
+      // const isLoaded = Array.from(document.getElementsByTagName("link"))
+      //   .map((link) => link.href.replace(window.origin, "")).includes(href);
+      // if (!isLoaded) {
+      // const link = document.createElement('link');
+      // link.setAttribute("rel", "stylesheet");
+      // link.setAttribute("type", "text/css");
+      // link.onload = () => {
+      //   nProgress.start();
+      //   startTransition(() => {
+      //     setMatch(getMatch(radixRouter, location.pathname));
+      //   })
+      // };
+      // link.setAttribute("href", href);
+      // document.getElementsByTagName("head")[0].appendChild(link);
+      // } else {
         nProgress.start();
         startTransition(() => {
           setMatch(getMatch(radixRouter, location.pathname));
         })
-      }
+      // }
     });
   }, []);
   useEffect(() => {
@@ -81,7 +82,7 @@ export const Router = ({ App, history, radixRouter }) => {
       params: match.params || {},
     },
     children: React.createElement(App, {
-      children: React.createElement(match.Page, {}),
+      children: React.createElement(match.Body, {}),
     }),
   });
 }

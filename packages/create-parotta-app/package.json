@@ -1,0 +1,16 @@
+{
+  "name": "create-parotta-app",
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "chalk": "^5.2.0",
+    "commander": "10.0.0",
+    "extract-files": "^13.0.0",
+    "gunzip-file": "^0.1.1",
+    "tar": "^6.1.13",
+    "unzip": "^0.1.11"
+  },
+  "bin": {
+    "parotta": "./index.js"
+  }
+}

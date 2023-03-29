@@ -11,7 +11,7 @@ import postcssNesting from "postcss-nesting";
 import { createMemoryHistory } from "history";
 import { createRouter } from 'radix3';
 import mimeTypes from "mime-types";
-import { Header, Router } from "./router";
+import { Head, Body } from "./router";
 import { renderToReadableStream } from 'react-dom/server';
 // import { renderToStream } from './render';
 
@@ -79,17 +79,17 @@ const serverRouter = createRouter({
 
 const clientRoutes = clientSideRoutes.reduce((acc, r) => {
   const Head = import(`${process.cwd()}/routes${r === "" ? "" : r}/page.jsx`);
-  const Page = import(`${process.cwd()}/routes${r === "" ? "" : r}/page.jsx`);
+  const Body = import(`${process.cwd()}/routes${r === "" ? "" : r}/page.jsx`);
   acc[r === "" ? "/" : r] = {
     Head,
-    Page,
+    Body,
   }
   return acc
 }, {});
 
 for (const k of Object.keys(clientRoutes)) {
   clientRoutes[k].Head = (await clientRoutes[k].Head).Head;
-  clientRoutes[k].Page = (await clientRoutes[k].Page).default;
+  clientRoutes[k].Body = (await clientRoutes[k].Body).Body;
 }
 
 const clientRouter = createRouter({
@@ -156,20 +156,18 @@ const renderPage = async (url) => {
   const stream = await renderToReadableStream(
     <html lang="en">
       <head>
-        <Header
+        <Head
           history={history}
           radixRouter={clientRouter}
           importMap={importMap}
         />
       </head>
       <body>
-        <div id="page">
-          <Router
-            App={React.lazy(() => import(`${process.cwd()}/routes/app.jsx`))}
-            history={history}
-            radixRouter={clientRouter}
-          />
-        </div>
+        <Body
+          App={React.lazy(() => import(`${process.cwd()}/routes/app.jsx`))}
+          history={history}
+          radixRouter={clientRouter}
+        />
         {config.hydrate &&
           <>
             <script type="module" defer={true} dangerouslySetInnerHTML={{
@@ -178,7 +176,7 @@ import React from "react";
 import { hydrateRoot } from "react-dom/client";
 import { createBrowserHistory } from "history";
 import { createRouter } from "radix3";
-import { Header, Router } from "parotta/router";
+import { Head, Body } from "parotta/router";
 
 const history = createBrowserHistory();
 const radixRouter = createRouter({
@@ -186,17 +184,17 @@ const radixRouter = createRouter({
   routes: {
     ${clientSideRoutes.map((r) => `"${r === "" ? "/" : r}": {
       Head: React.lazy(() => import("/routes${r === "" ? "" : r}/page.jsx").then((js) => ({ default: js.Head }))),
-      Page: React.lazy(() => import("/routes${r === "" ? "" : r}/page.jsx")),
+      Body: React.lazy(() => import("/routes${r === "" ? "" : r}/page.jsx").then((js) => ({ default: js.Body }))),
     }`).join(',\n      ')}
   },
 });
 
-hydrateRoot(document.head, React.createElement(Header, {
+hydrateRoot(document.head, React.createElement(Head, {
   history,
   radixRouter,
 }))
 
-hydrateRoot(document.getElementById("page"), React.createElement(Router, {
+hydrateRoot(document.body, React.createElement(Body, {
   App: React.lazy(() => import("/routes/app.jsx")),
   history,
   radixRouter,

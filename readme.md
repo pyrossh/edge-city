@@ -8,3 +8,5 @@ It is very opionated and has set of idiomatic ways of doing things.
 1. Add build step
 2. Deploy to Docker, Deno deploy, Vercel edge functions, Cloudflare workers, Bun edge (whenever it releases)
 3. Hydrate fetch cache
+4. Build a proper example (create-parotta-app)
+5. Build a Webiste with Docs using parotta

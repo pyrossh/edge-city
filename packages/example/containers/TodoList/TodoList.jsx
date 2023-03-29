@@ -7,7 +7,7 @@ const todos = [
 ];
 
 const TodoList = () => {
-  // const { data: todos } = usePromise("/todos");
+  // const { data: todos } = useFetch("/todos");
   return (
     <div className="todo-list">
       <h1>Todos</h1>
