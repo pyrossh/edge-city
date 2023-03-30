@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useSyncExternalStore } from "react";
+import {
+  Fragment, Suspense, createElement, createContext,
+  useContext, useState, useEffect, useMemo, useSyncExternalStore, useTransition
+} from "react";
 import nProgress from "nprogress";
 
 export const RouterContext = createContext(undefined);
@@ -11,27 +14,32 @@ const getMatch = (radixRouter, pathname) => {
   return matchedPage;
 }
 
-const getCssUrl = (pathname) => `/routes${pathname === "/" ? "/page.css" : pathname + "/page.css"}`;
+const getCssUrl = (pathname) => `/routes${pathname === "/" ? "" : pathname}`;
 
 export const Head = ({ history, radixRouter, importMap }) => {
   const pathname = useSyncExternalStore(history.listen, (v) => v ? v.location.pathname : history.location.pathname, () => history.location.pathname);
   const match = getMatch(radixRouter, pathname);
   const initialCss = useMemo(() => getCssUrl(history.location.pathname), []);
-  return React.createElement(React.Fragment, {
+  return createElement(Fragment, {
     children: [
-      React.createElement("link", {
+      createElement("link", {
         rel: "stylesheet",
         href: "https://unpkg.com/nprogress@0.2.0/nprogress.css",
       }),
-      React.createElement("link", {
+      createElement("link", {
+        id: "layoutCss",
+        rel: "stylesheet",
+        href: match.LayoutPath.replace("jsx", "css"),
+      }),
+      createElement("link", {
         id: "pageCss",
         rel: "stylesheet",
-        href: getCssUrl(history.location.pathname),
+        href: getCssUrl(history.location.pathname) + "/page.css",
       }),
-      React.createElement(React.Suspense, {
-        children: React.createElement(match.Head, {}),
+      createElement(Suspense, {
+        children: createElement(match.Head, {}),
       }),
-      React.createElement("script", {
+      createElement("script", {
         id: "importmap",
         type: "importmap",
         dangerouslySetInnerHTML: {
@@ -42,8 +50,8 @@ export const Head = ({ history, radixRouter, importMap }) => {
   });
 }
 
-export const Body = ({ App, history, radixRouter }) => {
-  const [isPending, startTransition] = React.useTransition();
+export const Body = ({ history, radixRouter }) => {
+  const [isPending, startTransition] = useTransition();
   const [match, setMatch] = useState(() => getMatch(radixRouter, history.location.pathname));
   useEffect(() => {
     return history.listen(({ location }) => {
@@ -63,10 +71,10 @@ export const Body = ({ App, history, radixRouter }) => {
       // link.setAttribute("href", href);
       // document.getElementsByTagName("head")[0].appendChild(link);
       // } else {
-        nProgress.start();
-        startTransition(() => {
-          setMatch(getMatch(radixRouter, location.pathname));
-        })
+      nProgress.start();
+      startTransition(() => {
+        setMatch(getMatch(radixRouter, location.pathname));
+      })
       // }
     });
   }, []);
@@ -76,13 +84,13 @@ export const Body = ({ App, history, radixRouter }) => {
     }
   }, [isPending])
   console.log('Router', isPending);
-  return React.createElement(RouterContext.Provider, {
+  return createElement(RouterContext.Provider, {
     value: {
       history: history,
       params: match.params || {},
     },
-    children: React.createElement(App, {
-      children: React.createElement(match.Body, {}),
+    children: createElement(match.Layout, {
+      children: createElement(match.Body, {}),
     }),
   });
 }
@@ -103,12 +111,12 @@ export const useRouter = () => {
 
 export const Link = (props) => {
   const router = useRouter();
-  return React.createElement("a", {
+  return createElement("a", {
     ...props,
     onMouseOver: (e) => {
       // Simple prefetching for now will work only with cache headers
-      fetch(getCssUrl(props.href));
-      fetch(getCssUrl(props.href).replace("css", "jsx"));
+      // fetch(getCssUrl(props.href));
+      // fetch(getCssUrl(props.href).replace("css", "jsx"));
     },
     onClick: (e) => {
       e.preventDefault();

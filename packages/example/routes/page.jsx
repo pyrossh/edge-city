@@ -1,17 +1,17 @@
 import React, { useEffect } from 'react';
-import { Link, useRouter } from "parotta/router";
+import { useRouter } from "parotta/router";
 import { useFetch } from "parotta/fetch";
 import Counter from "@/components/Counter/Counter";
 import "./page.css";
 
 export const Head = () => {
-  const { data } = useFetch("/todos");
   return (
     <title>Parotta</title>
   )
 }
 
 export const Body = () => {
+  const router = useRouter();
   const { data, cache } = useFetch("/todos");
   console.log('page');
   console.log('data', data);
@@ -19,8 +19,7 @@ export const Body = () => {
     setTimeout(() => {
       cache.invalidate(/todos/);
     }, 3000)
-  }, [])
-  const router = useRouter();
+  }, []);
   return (
     <div>
       <div>
@@ -30,9 +29,6 @@ export const Body = () => {
         </p>
         <Counter />
       </div>
-      <footer>
-        <Link href="/about">About us</Link>
-      </footer>
     </div>
   )
 }

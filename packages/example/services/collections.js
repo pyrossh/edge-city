@@ -4,6 +4,7 @@ const getCollection = (name) => {
     findMany: () => {
       return {
         toArray: async () => {
+          await new Promise((res) => setTimeout(res, 500));
           return items;
         }
       }

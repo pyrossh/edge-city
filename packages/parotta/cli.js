@@ -2,6 +2,7 @@
 
 import React from 'react';
 import path from 'path';
+import fs from 'fs';
 import walkdir from 'walkdir';
 import postcss from "postcss"
 import autoprefixer from "autoprefixer";
@@ -36,6 +37,12 @@ const mapFiles = () => {
     .forEach((page) => {
       const key = page.route || "/";
       routes[key] = { key: key, page: page.path };
+    });
+  dirs.filter((p) => p.includes('layout.jsx'))
+    .map((s) => ({ path: s, route: s.replace("/layout.jsx", "") }))
+    .forEach((item) => {
+      const key = item.route || "/";
+      routes[key].layout = item.path;
     });
   dirs.filter((p) => p.includes('api.js'))
     .map((s) => s.replace(process.cwd(), ""))
@@ -77,20 +84,23 @@ const serverRouter = createRouter({
   routes: serverSideRoutes,
 });
 
-const clientRoutes = clientSideRoutes.reduce((acc, r) => {
-  const Head = import(`${process.cwd()}/routes${r === "" ? "" : r}/page.jsx`);
-  const Body = import(`${process.cwd()}/routes${r === "" ? "" : r}/page.jsx`);
+const clientRoutes = await clientSideRoutes.reduce(async (accp, r) => {
+  const acc = await accp;
+  const src = await import(`${process.cwd()}/routes${r}/page.jsx`);
+  const exists = fs.existsSync(`${process.cwd()}/routes${r}/layout.jsx`);
+  const lpath = exists ? `/routes${r}/layout.jsx` : `/routes/layout.jsx`;
+  const lsrc = await import(`${process.cwd()}${lpath}`);
   acc[r === "" ? "/" : r] = {
-    Head,
-    Body,
+    r,
+    Head: src.Head,
+    Body: src.Body,
+    Layout: lsrc.default,
+    LayoutPath: lpath,
   }
   return acc
-}, {});
+}, Promise.resolve({}));
 
-for (const k of Object.keys(clientRoutes)) {
-  clientRoutes[k].Head = (await clientRoutes[k].Head).Head;
-  clientRoutes[k].Body = (await clientRoutes[k].Body).Body;
-}
+// console.log(clientRoutes);
 
 const clientRouter = createRouter({
   strictTrailingSlash: true,
@@ -182,9 +192,11 @@ const history = createBrowserHistory();
 const radixRouter = createRouter({
   strictTrailingSlash: true,
   routes: {
-    ${clientSideRoutes.map((r) => `"${r === "" ? "/" : r}": {
-      Head: React.lazy(() => import("/routes${r === "" ? "" : r}/page.jsx").then((js) => ({ default: js.Head }))),
-      Body: React.lazy(() => import("/routes${r === "" ? "" : r}/page.jsx").then((js) => ({ default: js.Body }))),
+    ${Object.keys(clientRoutes).map((r) => `"${r === "" ? "/" : r}": {
+      Head: React.lazy(() => import("/routes${r}/page.jsx").then((js) => ({ default: js.Head }))),
+      Body: React.lazy(() => import("/routes${r}/page.jsx").then((js) => ({ default: js.Body }))),
+      Layout: React.lazy(() => import("${clientRoutes[r].LayoutPath}")),
+      LayoutPath: "${clientRoutes[r].LayoutPath}",
     }`).join(',\n      ')}
   },
 });
@@ -246,7 +258,7 @@ const renderJs = async (src) => {
   try {
     const jsText = await Bun.file(src).text();
     const result = await transpiler.transform(jsText);
-    const js = result.replaceAll(`import"./page.css";`, "");
+    const js = result.replaceAll(`import"./page.css";`, "").replaceAll(`import"./layout.css";`, "");;
     // TODO
     //.replaceAll("$jsx", "React.createElement");
     return new Response(js, {
