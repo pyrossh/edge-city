@@ -12,7 +12,7 @@ import postcssNesting from "postcss-nesting";
 import { createMemoryHistory } from "history";
 import { createRouter } from 'radix3';
 import mimeTypes from "mime-types";
-import { Head, Body } from "./router";
+import { HeadApp, BodyApp } from "./router";
 import { renderToReadableStream } from 'react-dom/server';
 // import { renderToStream } from './render';
 
@@ -44,9 +44,9 @@ const mapFiles = () => {
       const key = item.route || "/";
       routes[key].layout = item.path;
     });
-  dirs.filter((p) => p.includes('api.js'))
+  dirs.filter((p) => p.includes('index.js'))
     .map((s) => s.replace(process.cwd(), ""))
-    .map((s) => ({ path: s, route: s.replace("/api.js", "") }))
+    .map((s) => ({ path: s, route: s.replace("/index.js", "") }))
     .forEach((api) => {
       const key = api.route || "/";
       routes[key] = routes[key] || { key };
@@ -91,7 +91,6 @@ const clientRoutes = await clientSideRoutes.reduce(async (accp, r) => {
   const lpath = exists ? `/routes${r}/layout.jsx` : `/routes/layout.jsx`;
   const lsrc = await import(`${process.cwd()}${lpath}`);
   acc[r === "" ? "/" : r] = {
-    r,
     Head: src.Head,
     Body: src.Body,
     Layout: lsrc.default,
@@ -132,6 +131,8 @@ const renderApi = async (filePath, req) => {
   }
 }
 
+console.log(clientRoutes)
+
 const renderPage = async (url) => {
   const packageJson = await import(path.join(process.cwd(), "package.json"));
   const config = packageJson.default.parotta || { hydrate: true };
@@ -166,18 +167,14 @@ const renderPage = async (url) => {
   const stream = await renderToReadableStream(
     <html lang="en">
       <head>
-        <Head
+        <HeadApp
           history={history}
           radixRouter={clientRouter}
           importMap={importMap}
         />
       </head>
       <body>
-        <Body
-          App={React.lazy(() => import(`${process.cwd()}/routes/app.jsx`))}
-          history={history}
-          radixRouter={clientRouter}
-        />
+        <BodyApp history={history} radixRouter={clientRouter} />
         {config.hydrate &&
           <>
             <script type="module" defer={true} dangerouslySetInnerHTML={{
@@ -186,13 +183,14 @@ import React from "react";
 import { hydrateRoot } from "react-dom/client";
 import { createBrowserHistory } from "history";
 import { createRouter } from "radix3";
-import { Head, Body } from "parotta/router";
+import { HeadApp, BodyApp } from "parotta/router";
+
 
 const history = createBrowserHistory();
 const radixRouter = createRouter({
   strictTrailingSlash: true,
   routes: {
-    ${Object.keys(clientRoutes).map((r) => `"${r === "" ? "/" : r}": {
+    ${Object.keys(clientRoutes).map((r) => `"${r}": {
       Head: React.lazy(() => import("/routes${r}/page.jsx").then((js) => ({ default: js.Head }))),
       Body: React.lazy(() => import("/routes${r}/page.jsx").then((js) => ({ default: js.Body }))),
       Layout: React.lazy(() => import("${clientRoutes[r].LayoutPath}")),
@@ -201,13 +199,12 @@ const radixRouter = createRouter({
   },
 });
 
-hydrateRoot(document.head, React.createElement(Head, {
+hydrateRoot(document.head, React.createElement(HeadApp, {
   history,
   radixRouter,
 }))
 
-hydrateRoot(document.body, React.createElement(Body, {
-  App: React.lazy(() => import("/routes/app.jsx")),
+hydrateRoot(document.body, React.createElement(BodyApp, {
   history,
   radixRouter,
 }));`}}>
@@ -258,10 +255,9 @@ const renderJs = async (src) => {
   try {
     const jsText = await Bun.file(src).text();
     const result = await transpiler.transform(jsText);
-    const js = result.replaceAll(`import"./page.css";`, "").replaceAll(`import"./layout.css";`, "");;
-    // TODO
+    const filteredJsx = result.split("\n").filter((ln) => !ln.includes(".css")).join("\n");
     //.replaceAll("$jsx", "React.createElement");
-    return new Response(js, {
+    return new Response(filteredJsx, {
       headers: {
         'Content-Type': 'application/javascript',
       },

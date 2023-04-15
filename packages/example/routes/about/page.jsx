@@ -14,9 +14,7 @@ export const Body = () => {
     <div className="about-page">
       <div>
         <h1>About Page</h1>
-        <p>
-          Path: {router.pathname}
-        </p>
+        <p>Showcase of using parotta meta-framework.</p>
       </div>
       <footer>
         <Link href="/">Back</Link>

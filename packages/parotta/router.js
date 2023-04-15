@@ -16,10 +16,10 @@ const getMatch = (radixRouter, pathname) => {
 
 const getCssUrl = (pathname) => `/routes${pathname === "/" ? "" : pathname}`;
 
-export const Head = ({ history, radixRouter, importMap }) => {
+export const HeadApp = ({ history, radixRouter, importMap }) => {
   const pathname = useSyncExternalStore(history.listen, (v) => v ? v.location.pathname : history.location.pathname, () => history.location.pathname);
   const match = getMatch(radixRouter, pathname);
-  const initialCss = useMemo(() => getCssUrl(history.location.pathname), []);
+  // const initialCss = useMemo(() => getCssUrl(history.location.pathname), []);
   return createElement(Fragment, {
     children: [
       createElement("link", {
@@ -50,7 +50,7 @@ export const Head = ({ history, radixRouter, importMap }) => {
   });
 }
 
-export const Body = ({ history, radixRouter }) => {
+export const BodyApp = ({ history, radixRouter }) => {
   const [isPending, startTransition] = useTransition();
   const [match, setMatch] = useState(() => getMatch(radixRouter, history.location.pathname));
   useEffect(() => {
@@ -82,8 +82,7 @@ export const Body = ({ history, radixRouter }) => {
     if (!isPending) {
       nProgress.done();
     }
-  }, [isPending])
-  console.log('Router', isPending);
+  }, [isPending]);
   return createElement(RouterContext.Provider, {
     value: {
       history: history,
@@ -126,4 +125,10 @@ export const Link = (props) => {
       router.push(props.href)
     },
   })
+}
+
+export const NavLink = ({ children, className, activeClassName, ...props }) => {
+  const { pathname } = useRouter();
+  const classNames = pathname === props.href ? [activeClassName, className] : [className];
+  return <Link className={classNames} {...props} >{children}</Link>
 }

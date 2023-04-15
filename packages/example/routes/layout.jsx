@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import { Link } from "parotta/router";
 import { ErrorBoundary } from "parotta/error";
 import "./layout.css";
+// import '@blueprintjs/core/lib/css/blueprint.css';
 
 const Layout = ({ children }) => {
   return (

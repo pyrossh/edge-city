@@ -1,17 +1,50 @@
 {
-  "name": "quickstart",
+  "name": "parotta-example",
   "type": "module",
   "scripts": {
     "dev": "bunx parotta",
     "start": "bunx parotta",
     "build": "docker build . -t example",
-    "run": "docker run -p 3000:3000 example"
+    "run": "docker run -p 3000:3000 example",
+    "test": "playwright test",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^0.2.9",
+    "@planetscale/database": "^1.6.0",
+    "drizzle-orm": "^0.23.4",
     "react": "18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "sql-highlight": "^4.3.2"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.17.1",
+    "@playwright/test": "^1.31.2",
+    "eslint": "^8.35.0",
+    "eslint-config-react-app": "^7.0.1",
+    "eslint-config-recommended": "^4.1.0"
   },
   "parotta": {
-    "hydrate": true
+    "hydrate": true,
+    "css": "@blueprintjs/core/lib/css/blueprint.css"
+  },
+  "eslintConfig": {
+    "root": true,
+    "parserOptions": {
+      "ecmaVersion": "latest",
+      "sourceType": "module"
+    },
+    "extends": [
+      "eslint:recommended",
+      "react-app"
+    ],
+    "ignorePatterns": [
+      "dist"
+    ],
+    "rules": {
+      "react/prop-types": "warn",
+      "react/react-in-jsx-scope": "off",
+      "no-unused-vars": "warn"
+    }
   }
 }

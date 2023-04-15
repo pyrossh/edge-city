@@ -1,6 +1,5 @@
 {
   "workspaces": [
-    "packages/example",
-    "packages/parotta"
+    "packages/*"
   ]
 }

@@ -6,7 +6,7 @@ It is very opionated and has set of idiomatic ways of doing things.
 
 ### Todo
 1. Add build step
-2. Deploy to Docker, Deno deploy, Vercel edge functions, Cloudflare workers, Bun edge (whenever it releases)
+2. Deploy to Node (using edge-runtime), Docker, Deno deploy, Vercel edge functions, Cloudflare workers, Bun edge (whenever it releases)
 3. Hydrate fetch cache
-4. Build a proper example (create-parotta-app)
-5. Build a Webiste with Docs using parotta
+4. Build a proper example (bunx create-parotta@latest)
+5. Build a Website with Docs using parotta
