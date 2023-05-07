@@ -5,7 +5,7 @@ import { migrate } from 'drizzle-orm/neon-serverless/migrator';
 import { highlight } from 'sql-highlight';
 
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, {
+const db = drizzle(pool, {
   logger: {
     logQuery: (query, params) => {
       const sqlString = params.reduce((acc, v, i) => acc.replaceAll("$" + (i + 1), v), query);
@@ -13,6 +13,8 @@ export const db = drizzle(pool, {
     }
   }
 });
+
+export default db;
 
 export const migrateAll = async () => {
   await migrate(db, { migrationsFolder: './db/migrations' });

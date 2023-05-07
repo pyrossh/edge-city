@@ -1,5 +1,5 @@
 import { gt, eq } from 'drizzle-orm';
-import { db, todos } from "@/db";
+import db, { todos } from "@/db";
 
 export const onGet = async (req) => {
   const url = new URL(req.url);
