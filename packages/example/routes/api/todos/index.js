@@ -1,4 +1,4 @@
-import { gt, eq } from 'drizzle-orm/expressions';
+import { gt, eq } from 'drizzle-orm';
 import { db, todos } from "@/db";
 
 export const onGet = async (req) => {
