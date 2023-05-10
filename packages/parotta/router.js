@@ -14,7 +14,7 @@ const getMatch = (radixRouter, pathname) => {
   return matchedPage;
 }
 
-const getCssUrl = (pathname) => `/routes${pathname === "/" ? "" : pathname}`;
+const getCssUrl = (pathname) => `/pages${pathname === "/" ? "" : pathname}`;
 
 export const HeadApp = ({ history, radixRouter, importMap }) => {
   const pathname = useSyncExternalStore(history.listen, (v) => v ? v.location.pathname : history.location.pathname, () => history.location.pathname);

@@ -24,14 +24,21 @@ console.log(`running with cwd=${path.basename(process.cwd())} node_env=${process
 
 const isProd = process.env.NODE_ENV === "production";
 
-const mapFiles = () => {
+const mapServerRoutes = () => {
   const routes = {};
-  const dirs = walkdir.sync(path.join(process.cwd(), "routes"))
+  const dirs = walkdir.sync(path.join(process.cwd(), "pages"))
     .map((s) => s.replace(process.cwd(), "")
-      .replace("/routes", "")
+      .replace("/pages", "")
       // .replaceAll("[", ":")
       // .replaceAll("]", "")
     );
+  walkdir.sync(path.join(process.cwd(), "services"))
+    .map((s) => s.replace(process.cwd(), ""))
+    .filter((s) => s.includes(".service.js"))
+    .forEach((s) => {
+      const serviceName = s.replace(".service.js", "");
+      routes[serviceName + "/*"] = { key: serviceName, service: s };
+    });
   dirs.filter((p) => p.includes('page.jsx'))
     .map((s) => ({ path: s, route: s.replace("/page.jsx", "") }))
     .forEach((page) => {
@@ -44,14 +51,6 @@ const mapFiles = () => {
       const key = item.route || "/";
       routes[key].layout = item.path;
     });
-  dirs.filter((p) => p.includes('index.js'))
-    .map((s) => s.replace(process.cwd(), ""))
-    .map((s) => ({ path: s, route: s.replace("/index.js", "") }))
-    .forEach((api) => {
-      const key = api.route || "/";
-      routes[key] = routes[key] || { key };
-      routes[key].api = api.path;
-    });
   walkdir.sync(path.join(process.cwd(), "static"))
     .map((s) => s.replace(process.cwd(), "").replace("/static", ""))
     .forEach((route) => {
@@ -63,20 +62,25 @@ const mapFiles = () => {
 const mapDeps = (dir) => {
   return walkdir.sync(path.join(process.cwd(), dir))
     .map((s) => s.replace(process.cwd(), ""))
-    .filter((s) => s.includes(".jsx"))
+    .filter((s) => s.includes(".jsx") || s.includes(".js"))
     .reduce((acc, s) => {
-      acc['@' + s.replace(".jsx", "")] = s
+      if (s.includes(".jsx")) {
+        acc['@' + s.replace(".jsx", "")] = s
+      }
+      if (s.includes(".js")) {
+        acc['@' + s.replace(".js", "")] = s
+      }
       return acc;
     }, {});
 }
 
-const mapPages = () => walkdir.sync(path.join(process.cwd(), "routes"))
+const mapPages = () => walkdir.sync(path.join(process.cwd(), "pages"))
   .filter((p) => p.includes('page.jsx'))
   .map((s) => s.replace(process.cwd(), ""))
-  .map((s) => s.replace("/routes", ""))
+  .map((s) => s.replace("/pages", ""))
   .map((s) => s.replace("/page.jsx", ""));
 
-const serverSideRoutes = mapFiles();
+const serverSideRoutes = mapServerRoutes();
 const clientSideRoutes = mapPages();
 
 const serverRouter = createRouter({
@@ -86,9 +90,9 @@ const serverRouter = createRouter({
 
 const clientRoutes = await clientSideRoutes.reduce(async (accp, r) => {
   const acc = await accp;
-  const src = await import(`${process.cwd()}/routes${r}/page.jsx`);
-  const exists = fs.existsSync(`${process.cwd()}/routes${r}/layout.jsx`);
-  const lpath = exists ? `/routes${r}/layout.jsx` : `/routes/layout.jsx`;
+  const src = await import(`${process.cwd()}/pages${r}/page.jsx`);
+  const exists = fs.existsSync(`${process.cwd()}/pages${r}/layout.jsx`);
+  const lpath = exists ? `/pages${r}/layout.jsx` : `/pages/layout.jsx`;
   const lsrc = await import(`${process.cwd()}${lpath}`);
   acc[r === "" ? "/" : r] = {
     Head: src.Head,
@@ -106,29 +110,16 @@ const clientRouter = createRouter({
   routes: clientRoutes,
 });
 
-const renderApi = async (filePath, req) => {
-  const routeImport = await import(path.join(process.cwd(), filePath));
-  switch (req.method) {
-    case "HEAD":
-      return routeImport.onHead(req);
-    case "OPTIONS":
-      return routeImport.onOptions(req);
-    case "GET":
-      return routeImport.onGet(req);
-    case "POST":
-      return routeImport.onPost(req);
-    case "PUT":
-      return routeImport.onPut(req);
-    case "PATCH":
-      return routeImport.onPatch(req);
-    case "DELETE":
-      return routeImport.onDelete(req);
-    default:
-      return new Response(`{"message": "route not found"}`, {
-        headers: { 'Content-Type': 'application/json' },
-        status: 404,
-      });
-  }
+const renderApi = async (key, filePath, req) => {
+  const url = new URL(req.url);
+  const params = await req.json();
+  const funcName = url.pathname.replace(`${key}/`, "");
+  const js = await import(path.join(process.cwd(), filePath));
+  const result = await js[funcName](params);
+  return new Response(JSON.stringify(result), {
+    headers: { 'Content-Type': 'application/json' },
+    status: 200,
+  });
 }
 
 console.log(clientRoutes)
@@ -157,6 +148,7 @@ const renderPage = async (url) => {
     "parotta/router": `/parotta/router.js`,
     "parotta/error": `/parotta/error.js`,
     "parotta/fetch": `/parotta/fetch.js`,
+    "parotta/rpc": `/parotta/rpc.js`,
     ...nodeDeps,
     ...components,
     ...containers,
@@ -191,8 +183,8 @@ const radixRouter = createRouter({
   strictTrailingSlash: true,
   routes: {
     ${Object.keys(clientRoutes).map((r) => `"${r}": {
-      Head: React.lazy(() => import("/routes${r}/page.jsx").then((js) => ({ default: js.Head }))),
-      Body: React.lazy(() => import("/routes${r}/page.jsx").then((js) => ({ default: js.Body }))),
+      Head: React.lazy(() => import("/pages${r}/page.jsx").then((js) => ({ default: js.Head }))),
+      Body: React.lazy(() => import("/pages${r}/page.jsx").then((js) => ({ default: js.Body }))),
       Layout: React.lazy(() => import("${clientRoutes[r].LayoutPath}")),
       LayoutPath: "${clientRoutes[r].LayoutPath}",
     }`).join(',\n      ')}
@@ -255,7 +247,27 @@ const renderJs = async (src) => {
   try {
     const jsText = await Bun.file(src).text();
     const result = await transpiler.transform(jsText);
-    const filteredJsx = result.split("\n").filter((ln) => !ln.includes(".css")).join("\n");
+    // inject code which calls the api for that function
+    const lines = result.split("\n");
+
+    // replace all .service imports which rpc interface
+    let addRpcImport = false;
+    lines.forEach((ln) => {
+      if (ln.includes(".service")) {
+        addRpcImport = true;
+        const [importName, serviceName] = ln.match(/\@\/services\/(.*)\.service/);
+        const funcsText = ln.replace(`from "${importName}"`, "").replace("import", "").replace("{", "").replace("}", "").replace(";", "");
+        const funcsName = funcsText.trim().split(",");
+        funcsName.forEach((fnName) => {
+          lines.push(`const ${fnName} = rpc("${serviceName}/${fnName}")`);
+        })
+      }
+    })
+    if (addRpcImport) {
+      lines.unshift(`import rpc from "parotta/rpc"`);
+    }
+    // remove .css and .service imports
+    const filteredJsx = lines.filter((ln) => !ln.includes(".css") && !ln.includes(".service")).join("\n");
     //.replaceAll("$jsx", "React.createElement");
     return new Response(filteredJsx, {
       headers: {
@@ -310,8 +322,8 @@ export default {
       if (match.page && req.headers.get("Accept")?.includes('text/html')) {
         return renderPage(url);
       }
-      if (match.api) {
-        return renderApi(`/routes${match.api}`, req);
+      if (match.service) {
+        return renderApi(match.key, match.service, req);
       }
     }
     if (req.headers.get("Accept")?.includes('text/html')) {
