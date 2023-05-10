@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
-import { Link } from "parotta/router";
-import { ErrorBoundary } from "parotta/error";
+import { Link } from "parotta/runtime";
+import { ErrorBoundary } from "parotta/runtime";
 import "./layout.css";
 
 const Layout = ({ children }) => {

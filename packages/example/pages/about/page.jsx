@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useRouter } from "parotta/router";
+import { Link, useRouter } from "parotta/runtime";
 import "./page.css";
 
 export const Head = () => {

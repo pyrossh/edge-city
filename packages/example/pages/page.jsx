@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useRouter } from "parotta/router";
+import { useRouter } from "parotta/runtime";
 import Counter from "@/components/Counter/Counter";
 import "./page.css";
 

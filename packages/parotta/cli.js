@@ -12,7 +12,7 @@ import postcssNesting from "postcss-nesting";
 import { createMemoryHistory } from "history";
 import { createRouter } from 'radix3';
 import mimeTypes from "mime-types";
-import { HeadApp, BodyApp } from "./router";
+import { HeadApp, BodyApp } from "./runtime";
 import { renderToReadableStream } from 'react-dom/server';
 // import { renderToStream } from './render';
 
@@ -142,13 +142,8 @@ const renderPage = async (url) => {
     "react/jsx-dev-runtime": `https://esm.sh/react@18.2.0${devTag}/jsx-dev-runtime`,
     "react-dom/client": `https://esm.sh/react-dom@18.2.0${devTag}/client`,
     "nprogress": "https://esm.sh/nprogress@0.2.0",
-    // "parotta/router": `https://esm.sh/parotta@${version}/router.js`,
-    // "parotta/error": `https://esm.sh/parotta@${version}/error.js`,
-    // "parotta/fetch": `https://esm.sh/parotta@${version}/fetch.js`,
-    "parotta/router": `/parotta/router.js`,
-    "parotta/error": `/parotta/error.js`,
-    "parotta/fetch": `/parotta/fetch.js`,
-    "parotta/rpc": `/parotta/rpc.js`,
+    // "parotta/runtime": `https://esm.sh/parotta@${version}/runtime.js`,
+    "parotta/runtime": `/parotta/runtime.js`,
     ...nodeDeps,
     ...components,
     ...containers,
@@ -175,7 +170,7 @@ import React from "react";
 import { hydrateRoot } from "react-dom/client";
 import { createBrowserHistory } from "history";
 import { createRouter } from "radix3";
-import { HeadApp, BodyApp } from "parotta/router";
+import { HeadApp, BodyApp } from "parotta/runtime";
 
 
 const history = createBrowserHistory();
@@ -264,7 +259,7 @@ const renderJs = async (src) => {
       }
     })
     if (addRpcImport) {
-      lines.unshift(`import rpc from "parotta/rpc"`);
+      lines.unshift(`import { rpc } from "parotta/runtime"`);
     }
     // remove .css and .service imports
     const filteredJsx = lines.filter((ln) => !ln.includes(".css") && !ln.includes(".service")).join("\n");

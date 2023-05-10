@@ -1,8 +1,64 @@
-import {
+import React, {
   Fragment, Suspense, createElement, createContext,
   useContext, useState, useEffect, useMemo, useSyncExternalStore, useTransition
 } from "react";
 import nProgress from "nprogress";
+
+export const domain = () => typeof window !== 'undefined' ? window.origin : "http://0.0.0.0:3000";
+export const globalCache = new Map();
+
+const changedArray = (a = [], b = []) =>
+  a.length !== b.length || a.some((item, index) => !Object.is(item, b[index]))
+
+export const rpc = (serviceName) => async (params = {}) => {
+  const res = await fetch(`${domain()}/services/${serviceName}`, {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(params),
+  })
+  return await res.json();
+}
+
+export const useCache = () => {
+  const [_, rerender] = useState(false);
+  const cache = useMemo(() => globalCache, []);
+  const get = (k) => cache.get(k)
+  const set = (k, v) => {
+    cache.set(k, v);
+    rerender((c) => !c);
+  }
+  const invalidate = (regex) => {
+    Array.from(cache.keys())
+      .filter((k) => regex.test(k))
+      .forEach((k) => {
+        fetchData(k).then((v) => set(k, v));
+      });
+  }
+  return {
+    get,
+    set,
+    invalidate,
+  }
+}
+
+export const useRpc = (fn, params) => {
+  const cache = useCache();
+  const key = `${fn.name}:${JSON.stringify(params)}`;
+  const value = cache.get(key);
+  if (value) {
+    if (value instanceof Promise) {
+      throw value;
+    } else if (value instanceof Error) {
+      throw value;
+    }
+    return { data: value, cache };
+  }
+  cache.set(key, fn(params).then((v) => cache.set(key, v)));
+  throw cache.get(key);
+}
 
 export const RouterContext = createContext(undefined);
 
@@ -131,4 +187,42 @@ export const NavLink = ({ children, className, activeClassName, ...props }) => {
   const { pathname } = useRouter();
   const classNames = pathname === props.href ? [activeClassName, className] : [className];
   return <Link className={classNames} {...props} >{children}</Link>
+}
+
+export class ErrorBoundary extends React.Component {
+  // static propTypes = {
+  //   resetKeys: PropTypes.arrayOf(PropTypes.any),
+  // }
+  static getDerivedStateFromError(error) {
+    return { error }
+  }
+
+  state = {}
+
+  componentDidCatch(error, info) {
+    this.props.onError?.(error, info)
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    const { error } = this.state
+    const { resetKeys } = this.props
+    if (
+      error !== null &&
+      prevState.error !== null &&
+      changedArray(prevProps.resetKeys, resetKeys)
+    ) {
+      this.setState({});
+    }
+  }
+
+  render() {
+    const { error } = this.state;
+    const { children, fallback } = this.props;
+    if (error) {
+      if (React.isValidElement(fallback)) {
+        return fallback;
+      }
+    }
+    return children;
+  }
 }
