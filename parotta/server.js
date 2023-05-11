@@ -12,10 +12,14 @@ import { createRouter } from 'radix3';
 import mimeTypes from "mime-types";
 import { HeadApp, BodyApp } from "./runtime";
 
-// const version = (await import(path.join(import.meta.dir, "package.json"))).default.version;
-// console.log(`parotta v${version}`)
-console.log(`running with cwd=${path.basename(process.cwd())} node_env=${process.env.NODE_ENV}`);
-
+if (!globalThis.firstRun) {
+  globalThis.firstRun = true
+  const version = (await import(path.join(import.meta.dir, "package.json"))).default.version;
+  console.log(`parotta v${version}`)
+  console.log(`running with cwd=${path.basename(process.cwd())} node_env=${process.env.NODE_ENV}`);
+} else {
+  console.log(`server reloading`);
+}
 const isProd = process.env.NODE_ENV === "production";
 
 const createServerRouter = async () => {
