@@ -2,7 +2,6 @@ import React, {
   Fragment, Suspense, createElement, createContext,
   useContext, useState, useEffect, useMemo, useSyncExternalStore, useTransition
 } from "react";
-import nProgress from "nprogress";
 
 export const domain = () => typeof window !== 'undefined' ? window.origin : "http://0.0.0.0:3000";
 export const globalCache = new Map();
@@ -106,7 +105,7 @@ export const HeadApp = ({ history, radixRouter, importMap }) => {
   });
 }
 
-export const BodyApp = ({ history, radixRouter }) => {
+export const BodyApp = ({ nProgress, history, radixRouter }) => {
   const [isPending, startTransition] = useTransition();
   const [match, setMatch] = useState(() => getMatch(radixRouter, history.location.pathname));
   useEffect(() => {
@@ -186,7 +185,11 @@ export const Link = (props) => {
 export const NavLink = ({ children, className, activeClassName, ...props }) => {
   const { pathname } = useRouter();
   const classNames = pathname === props.href ? [activeClassName, className] : [className];
-  return <Link className={classNames} {...props} >{children}</Link>
+  return createElement(Link, {
+    children,
+    className: classNames,
+    ...props,
+  })
 }
 
 export class ErrorBoundary extends React.Component {

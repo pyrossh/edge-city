@@ -14,6 +14,8 @@
     "drizzle-auth-adaptor-pg": "^0.0.3",
     "drizzle-orm": "0.25.4",
     "next-auth": "^4.22.1",
+    "normalize.css": "^8.0.1",
+    "parotta": "file:../",
     "react": "18.2.0",
     "react-dom": "^18.2.0",
     "sql-highlight": "^4.3.2"
@@ -27,7 +29,9 @@
   },
   "parotta": {
     "hydrate": true,
-    "css": "@blueprintjs/core/lib/css/blueprint.css"
+    "css": [
+      "node_modules/normalize.css/normalize.css"
+    ]
   },
   "eslintConfig": {
     "root": true,

@@ -1,4 +1,4 @@
-# parotta-example
+# Sample Parotta Application
 
 ## Requirements
 
@@ -9,6 +9,10 @@
 1. `bun i`
 2. `bunx playright install`
 
+## Running
+
+`bun run dev`
+
 ## Testing
 
-`bun run test`
+`bun test`
