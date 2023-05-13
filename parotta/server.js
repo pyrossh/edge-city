@@ -113,6 +113,7 @@ const createClientRouter = async () => {
       nProgress,
       history,
       radixRouter,
+      rpcCache: {},
     }));`
   const router = createRouter({
     strictTrailingSlash: true,
@@ -188,6 +189,7 @@ const renderPage = async (url) => {
   const history = createMemoryHistory({
     initialEntries: [url.pathname + url.search],
   });
+  const nProgress = { start: () => { }, done: () => { } }
   const stream = await renderToReadableStream(
     <html lang="en">
       <head>
@@ -198,7 +200,7 @@ const renderPage = async (url) => {
         />
       </head>
       <body>
-        <BodyApp nProgress={{ start: () => { }, done: () => { } }} history={history} radixRouter={clientRouter} />
+        <BodyApp nProgress={nProgress} history={history} radixRouter={clientRouter} rpcCache={{}} />
         {config.hydrate &&
           <>
             <script type="module" defer={true} dangerouslySetInnerHTML={{

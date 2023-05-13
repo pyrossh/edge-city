@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import TodoList from "@/containers/TodoList/TodoList";
 import "./page.css";
 
@@ -12,9 +12,9 @@ export const Body = () => {
   return (
     <div>
       <h1>Todos</h1>
-      <ul>
+      <Suspense fallback={<p>Loading...</p>}>
         <TodoList />
-      </ul>
+      </Suspense>
     </div>
   )
 }

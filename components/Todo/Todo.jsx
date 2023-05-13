@@ -26,7 +26,9 @@ const Todo = ({ todo }) => {
           <input
             type="checkbox"
             checked={todo.completed}
-            // onChange={(e) => updateMutation.mutate({ completed: e.target.checked })}
+            onChange={(e) => {
+              // updateMutation.mutate({ completed: e.target.checked })
+            }}
           />{" "}
           <span className={todo.completed ? "done" : undefined}>{todo.text}</span>{" "}
         </label>

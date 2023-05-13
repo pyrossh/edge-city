@@ -1,10 +1,9 @@
 import React, {
   Fragment, Suspense, createElement, createContext,
-  useContext, useState, useEffect, useMemo, useSyncExternalStore, useTransition
+  useContext, useState, useEffect, useSyncExternalStore, useTransition
 } from "react";
 
 export const domain = () => typeof window !== 'undefined' ? window.origin : "http://0.0.0.0:3000";
-export const globalCache = new Map();
 
 const changedArray = (a = [], b = []) =>
   a.length !== b.length || a.some((item, index) => !Object.is(item, b[index]))
@@ -21,16 +20,17 @@ export const rpc = (serviceName) => async (params = {}) => {
   return await res.json();
 }
 
+export const RpcContext = createContext(undefined);
 export const useCache = () => {
   const [_, rerender] = useState(false);
-  const cache = useMemo(() => globalCache, []);
-  const get = (k) => cache.get(k)
+  const ctx = useContext(RpcContext);
+  const get = (k) => ctx[k]
   const set = (k, v) => {
-    cache.set(k, v);
+    ctx[k] = v;
     rerender((c) => !c);
   }
   const invalidate = (regex) => {
-    Array.from(cache.keys())
+    Object.keys(ctx)
       .filter((k) => regex.test(k))
       .forEach((k) => {
         fetchData(k).then((v) => set(k, v));
@@ -105,7 +105,7 @@ export const HeadApp = ({ history, radixRouter, importMap }) => {
   });
 }
 
-export const BodyApp = ({ nProgress, history, radixRouter }) => {
+export const BodyApp = ({ nProgress, history, radixRouter, rpcCache }) => {
   const [isPending, startTransition] = useTransition();
   const [match, setMatch] = useState(() => getMatch(radixRouter, history.location.pathname));
   useEffect(() => {
@@ -138,13 +138,16 @@ export const BodyApp = ({ nProgress, history, radixRouter }) => {
       nProgress.done();
     }
   }, [isPending]);
-  return createElement(RouterContext.Provider, {
-    value: {
-      history: history,
-      params: match.params || {},
-    },
-    children: createElement(match.Layout, {
-      children: createElement(match.Body, {}),
+  return createElement(RpcContext.Provider, {
+    value: rpcCache,
+    children: createElement(RouterContext.Provider, {
+      value: {
+        history: history,
+        params: match.params || {},
+      },
+      children: createElement(match.Layout, {
+        children: createElement(match.Body, {}),
+      }),
     }),
   });
 }

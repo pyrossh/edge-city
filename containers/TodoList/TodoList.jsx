@@ -9,9 +9,7 @@ const TodoList = () => {
     <div className="todo-list">
       <ul>
         {data.map((item) => (
-          <li key={item.id}>
-            <Todo todo={item} />
-          </li>
+          <Todo key={item.id} todo={item} />
         ))}
       </ul>
     </div>
