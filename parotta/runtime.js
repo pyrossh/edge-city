@@ -1,7 +1,7 @@
 import React, {
-  Fragment, Suspense, createElement, createContext,
-  useContext, useState, useEffect, useSyncExternalStore, useTransition
+  createElement, createContext, useContext, useState, useEffect, useTransition
 } from "react";
+import { HelmetProvider } from 'react-helmet-async';
 
 export const domain = () => typeof window !== 'undefined' ? window.origin : "http://0.0.0.0:3000";
 
@@ -69,48 +69,14 @@ const getMatch = (radixRouter, pathname) => {
   return matchedPage;
 }
 
-const getCssUrl = (pathname) => `/pages${pathname === "/" ? "" : pathname}`;
+const getCssUrl = (pathname) => `/pages${pathname === "/" ? "" : pathname}/page.css`;
 
-export const HeadApp = ({ history, radixRouter, importMap }) => {
-  const pathname = useSyncExternalStore(history.listen, (v) => v ? v.location.pathname : history.location.pathname, () => history.location.pathname);
-  const match = getMatch(radixRouter, pathname);
-  // const initialCss = useMemo(() => getCssUrl(history.location.pathname), []);
-  return createElement(Fragment, {
-    children: [
-      createElement("link", {
-        rel: "stylesheet",
-        href: "https://unpkg.com/nprogress@0.2.0/nprogress.css",
-      }),
-      createElement("link", {
-        id: "layoutCss",
-        rel: "stylesheet",
-        href: match.LayoutPath.replace("jsx", "css"),
-      }),
-      createElement("link", {
-        id: "pageCss",
-        rel: "stylesheet",
-        href: getCssUrl(history.location.pathname) + "/page.css",
-      }),
-      createElement(Suspense, {
-        children: createElement(match.Head, {}),
-      }),
-      createElement("script", {
-        id: "importmap",
-        type: "importmap",
-        dangerouslySetInnerHTML: {
-          __html: JSON.stringify({ "imports": importMap }),
-        }
-      })
-    ]
-  });
-}
-
-export const BodyApp = ({ nProgress, history, radixRouter, rpcCache }) => {
+export const App = ({ nProgress, history, radixRouter, rpcCache, helmetContext }) => {
   const [isPending, startTransition] = useTransition();
   const [match, setMatch] = useState(() => getMatch(radixRouter, history.location.pathname));
   useEffect(() => {
     return history.listen(({ location }) => {
-      // const href = getCssUrl(location.pathname);
+      const href = getCssUrl(location.pathname);
       // const isLoaded = Array.from(document.getElementsByTagName("link"))
       //   .map((link) => link.href.replace(window.origin, "")).includes(href);
       // if (!isLoaded) {
@@ -126,6 +92,11 @@ export const BodyApp = ({ nProgress, history, radixRouter, rpcCache }) => {
       // link.setAttribute("href", href);
       // document.getElementsByTagName("head")[0].appendChild(link);
       // } else {
+      const link = document.createElement('link');
+      link.setAttribute("rel", "stylesheet");
+      link.setAttribute("type", "text/css");
+      link.setAttribute("href", href);
+      document.getElementsByTagName("head")[0].appendChild(link);
       nProgress.start();
       startTransition(() => {
         setMatch(getMatch(radixRouter, location.pathname));
@@ -138,15 +109,18 @@ export const BodyApp = ({ nProgress, history, radixRouter, rpcCache }) => {
       nProgress.done();
     }
   }, [isPending]);
-  return createElement(RpcContext.Provider, {
-    value: rpcCache,
-    children: createElement(RouterContext.Provider, {
-      value: {
-        history: history,
-        params: match.params || {},
-      },
-      children: createElement(match.Layout, {
-        children: createElement(match.Body, {}),
+  return createElement(HelmetProvider, {
+    context: helmetContext,
+    children: createElement(RpcContext.Provider, {
+      value: rpcCache,
+      children: createElement(RouterContext.Provider, {
+        value: {
+          history: history,
+          params: match.params || {},
+        },
+        children: createElement(match.Layout, {
+          children: createElement(match.Page, {}),
+        }),
       }),
     }),
   });

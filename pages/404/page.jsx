@@ -1,13 +1,7 @@
 import React from 'react';
 import "./page.css";
 
-export const Head = () => {
-  return (
-    <title>Page not found</title>
-  )
-}
-
-export const Body = () => {
+const Page = () => {
   return (
     <div>
       <h1>404</h1>
@@ -17,3 +11,5 @@ export const Body = () => {
     </div>
   )
 }
+
+export default Page;

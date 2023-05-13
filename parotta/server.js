@@ -10,7 +10,7 @@ import postcssNesting from "postcss-nesting";
 import { createMemoryHistory } from "history";
 import { createRouter } from 'radix3';
 import mimeTypes from "mime-types";
-import { HeadApp, BodyApp } from "./runtime";
+import { App } from "./runtime";
 
 if (!globalThis.firstRun) {
   globalThis.firstRun = true
@@ -74,8 +74,7 @@ const createClientRouter = async () => {
       const lpath = exists ? `/pages${r}/layout.jsx` : `/pages/layout.jsx`;
       const lsrc = await import(`${process.cwd()}${lpath}`);
       acc[r === "" ? "/" : r] = {
-        Head: src.Head,
-        Body: src.Body,
+        Page: src.default,
         Layout: lsrc.default,
         LayoutPath: lpath,
       }
@@ -88,32 +87,26 @@ const createClientRouter = async () => {
     import { createBrowserHistory } from "history";
     import nProgress from "nprogress";
     import { createRouter } from "radix3";
-    import { HeadApp, BodyApp } from "parotta/runtime";
-
+    import { App } from "parotta/runtime";
 
     const history = createBrowserHistory();
     const radixRouter = createRouter({
       strictTrailingSlash: true,
       routes: {
         ${Object.keys(routes).map((r) => `"${r}": {
-          Head: React.lazy(() => import("/pages${r}/page.jsx").then((js) => ({ default: js.Head }))),
-          Body: React.lazy(() => import("/pages${r}/page.jsx").then((js) => ({ default: js.Body }))),
+          Page: React.lazy(() => import("/pages${r}/page.jsx")),
           Layout: React.lazy(() => import("${routes[r].LayoutPath}")),
           LayoutPath: "${routes[r].LayoutPath}",
         }`).join(',\n      ')}
       },
     });
 
-    hydrateRoot(document.head, React.createElement(HeadApp, {
-      history,
-      radixRouter,
-    }))
-
-    hydrateRoot(document.body, React.createElement(BodyApp, {
+    hydrateRoot(document.body, React.createElement(App, {
       nProgress,
       history,
       radixRouter,
       rpcCache: {},
+      helmetContext: {},
     }));`
   const router = createRouter({
     strictTrailingSlash: true,
@@ -189,18 +182,24 @@ const renderPage = async (url) => {
   const history = createMemoryHistory({
     initialEntries: [url.pathname + url.search],
   });
+  const helmetContext = {}
   const nProgress = { start: () => { }, done: () => { } }
   const stream = await renderToReadableStream(
     <html lang="en">
       <head>
-        <HeadApp
-          history={history}
-          radixRouter={clientRouter}
-          importMap={importMap}
-        />
+        <link rel="stylesheet" href="https://unpkg.com/nprogress@0.2.0/nprogress.css" />
+        {/* <link id="layoutCss" rel="stylesheet" href={ match.LayoutPath.replace("jsx", "css"),} /> */}
+        <link id="pageCss" rel="stylesheet" href={`/pages${url.pathname}/page.css`} />
+        <script type="importmap" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "imports": importMap }) }} />
       </head>
       <body>
-        <BodyApp nProgress={nProgress} history={history} radixRouter={clientRouter} rpcCache={{}} />
+        <App
+          nProgress={nProgress}
+          history={history}
+          radixRouter={clientRouter}
+          rpcCache={{}}
+          helmetContext={helmetContext}
+        />
         {config.hydrate &&
           <>
             <script type="module" defer={true} dangerouslySetInnerHTML={{
@@ -212,6 +211,8 @@ const renderPage = async (url) => {
       </body>
     </html >
   );
+  console.log("helmetContext", helmetContext.helmet.title.toString());
+  console.log("helmetContext", helmetContext.helmet.link.toString());
   return new Response(stream, {
     headers: { 'Content-Type': 'text/html' },
     status: 200,
@@ -264,7 +265,7 @@ const renderJs = async (srcFile) => {
       lines.unshift(`import { rpc } from "parotta/runtime";`);
     }
     // remove .css and .service imports
-    const filteredJsx = lines.filter((ln) => !ln.includes(".css") && !ln.includes(".service")).join("\n");
+    const filteredJsx = lines.filter((ln) => !ln.includes(`.css"`) && !ln.includes(`.service"`)).join("\n");
     //.replaceAll("$jsx", "React.createElement");
     return new Response(filteredJsx, {
       headers: {
