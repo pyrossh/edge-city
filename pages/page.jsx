@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useRouter } from "parotta/runtime";
+import Layout from '@/components/Layout/Layout';
 import Counter from "@/components/Counter/Counter";
 import { Helmet } from 'react-helmet-async';
 import "./page.css";
@@ -10,7 +11,7 @@ const Page = () => {
 
   }, []);
   return (
-    <div>
+    <Layout>
       <Helmet>
         <title>Parotta App</title>
       </Helmet>
@@ -21,7 +22,7 @@ const Page = () => {
         </p>
         <Counter />
       </div>
-    </div>
+    </Layout>
   )
 }
 

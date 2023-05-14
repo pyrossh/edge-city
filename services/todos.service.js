@@ -2,8 +2,6 @@ import { eq, asc } from 'drizzle-orm';
 import db, { todos } from "@/db";
 
 export const getTodos = async () => {
-  // console.log("getTodos");
-  // return [];
   return await db.select().from(todos).orderBy(asc(todos.id));
 }
 

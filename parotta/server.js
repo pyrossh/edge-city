@@ -1,7 +1,6 @@
 import React from "react";
 import { renderToReadableStream } from "react-dom/server";
 import path from 'path';
-import fs from 'fs';
 import walkdir from 'walkdir';
 import postcss from "postcss"
 import autoprefixer from "autoprefixer";
@@ -29,7 +28,8 @@ const createServerRouter = async () => {
       .replace("/pages", "")
       // .replaceAll("[", ":")
       // .replaceAll("]", "")
-    );
+    )
+
   walkdir.sync(path.join(process.cwd(), "services"))
     .map((s) => s.replace(process.cwd(), ""))
     .filter((s) => s.includes(".service.js"))
@@ -42,12 +42,6 @@ const createServerRouter = async () => {
     .forEach((page) => {
       const key = page.route || "/";
       routes[key] = { key: key, page: page.path };
-    });
-  dirs.filter((p) => p.includes('layout.jsx'))
-    .map((s) => ({ path: s, route: s.replace("/layout.jsx", "") }))
-    .forEach((item) => {
-      const key = item.route || "/";
-      routes[key].layout = item.path;
     });
   walkdir.sync(path.join(process.cwd(), "static"))
     .map((s) => s.replace(process.cwd(), "").replace("/static", ""))
@@ -63,21 +57,15 @@ const createServerRouter = async () => {
 
 const createClientRouter = async () => {
   const routes = await walkdir.sync(path.join(process.cwd(), "pages"))
-    .filter((p) => p.includes('page.jsx'))
+    .filter((p) => p.includes("page.jsx"))
+    .filter((p) => !p.includes("/_"))
     .map((s) => s.replace(process.cwd(), ""))
     .map((s) => s.replace("/pages", ""))
     .map((s) => s.replace("/page.jsx", ""))
     .reduce(async (accp, r) => {
       const acc = await accp;
       const src = await import(`${process.cwd()}/pages${r}/page.jsx`);
-      const exists = fs.existsSync(`${process.cwd()}/pages${r}/layout.jsx`);
-      const lpath = exists ? `/pages${r}/layout.jsx` : `/pages/layout.jsx`;
-      const lsrc = await import(`${process.cwd()}${lpath}`);
-      acc[r === "" ? "/" : r] = {
-        Page: src.default,
-        Layout: lsrc.default,
-        LayoutPath: lpath,
-      }
+      acc[r === "" ? "/" : r] = src.default;
       return acc
     }, Promise.resolve({}));
   // console.log(clientRoutes);
@@ -93,11 +81,7 @@ const createClientRouter = async () => {
     const radixRouter = createRouter({
       strictTrailingSlash: true,
       routes: {
-        ${Object.keys(routes).map((r) => `"${r}": {
-          Page: React.lazy(() => import("/pages${r}/page.jsx")),
-          Layout: React.lazy(() => import("${routes[r].LayoutPath}")),
-          LayoutPath: "${routes[r].LayoutPath}",
-        }`).join(',\n      ')}
+        ${Object.keys(routes).map((r) => `"${r}": React.lazy(() => import("/pages${r}/page.jsx"))`).join(',\n      ')}
       },
     });
 
@@ -164,7 +148,6 @@ const renderPage = async (url) => {
     return acc;
   }, {})
   const components = mapDeps("components");
-  const containers = mapDeps("containers");
   const importMap = {
     "radix3": `https://esm.sh/radix3`,
     "history": "https://esm.sh/history@5.3.0",
@@ -177,7 +160,6 @@ const renderPage = async (url) => {
     "parotta/runtime": `/parotta/runtime.js`,
     ...nodeDeps,
     ...components,
-    ...containers,
   };
   const history = createMemoryHistory({
     initialEntries: [url.pathname + url.search],
@@ -188,7 +170,6 @@ const renderPage = async (url) => {
     <html lang="en">
       <head>
         <link rel="stylesheet" href="https://unpkg.com/nprogress@0.2.0/nprogress.css" />
-        {/* <link id="layoutCss" rel="stylesheet" href={ match.LayoutPath.replace("jsx", "css"),} /> */}
         <link id="pageCss" rel="stylesheet" href={`/pages${url.pathname}/page.css`} />
         <script type="importmap" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "imports": importMap }) }} />
       </head>
@@ -211,8 +192,11 @@ const renderPage = async (url) => {
       </body>
     </html >
   );
-  console.log("helmetContext", helmetContext.helmet.title.toString());
-  console.log("helmetContext", helmetContext.helmet.link.toString());
+  // TODO:
+  // if (bot || isCrawler) {
+  //  await stream.allReady
+  //  add helmetContext to head
+  // }
   return new Response(stream, {
     headers: { 'Content-Type': 'text/html' },
     status: 200,
@@ -311,7 +295,8 @@ const server = async (req) => {
     return renderJs(path.join(process.cwd(), url.pathname));
   }
   const match = serverRouter.lookup(url.pathname);
-  if (match) {
+  // TODO: maybe remove this as renderPage would handle it in clientRouter
+  if (match && !match.key.includes("/_")) {
     if (match.file) {
       return sendFile(path.join(process.cwd(), `/static${match.file}`));
     }
@@ -323,8 +308,10 @@ const server = async (req) => {
     }
   }
   if (req.headers.get("Accept")?.includes('text/html')) {
-    return renderPage(url);
+    // not found html page
+    return renderPage(new URL(`${url.protocol}//${url.host}/_404`));
   }
+  // not found generic page
   return new Response(`{"message": "not found"}`, {
     headers: { 'Content-Type': 'application/json' },
     status: 404,

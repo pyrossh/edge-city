@@ -1,12 +1,10 @@
 import React, {
-  createElement, createContext, useContext, useState, useEffect, useTransition
+  Suspense, createElement, createContext, useContext, useState, useEffect, useTransition
 } from "react";
 import { HelmetProvider } from 'react-helmet-async';
+import { ErrorBoundary } from "react-error-boundary";
 
 export const domain = () => typeof window !== 'undefined' ? window.origin : "http://0.0.0.0:3000";
-
-const changedArray = (a = [], b = []) =>
-  a.length !== b.length || a.some((item, index) => !Object.is(item, b[index]))
 
 export const rpc = (serviceName) => async (params = {}) => {
   const res = await fetch(`${domain()}/services/${serviceName}`, {
@@ -64,7 +62,7 @@ export const RouterContext = createContext(undefined);
 const getMatch = (radixRouter, pathname) => {
   const matchedPage = radixRouter.lookup(pathname);
   if (!matchedPage) {
-    return radixRouter.lookup("/404");
+    return React.lazy(() => import("/pages/_404/page.jsx"));
   }
   return matchedPage;
 }
@@ -118,8 +116,13 @@ export const App = ({ nProgress, history, radixRouter, rpcCache, helmetContext }
           history: history,
           params: match.params || {},
         },
-        children: createElement(match.Layout, {
-          children: createElement(match.Page, {}),
+        children: createElement(ErrorBoundary, {
+          onError: (err) => console.log(err),
+          fallback: createElement("p", {}, "Oops something went wrong"),
+          children: createElement(Suspense, {
+            fallback: createElement("p", {}, "Loading..."),
+            children: createElement(match, {}),
+          }),
         }),
       }),
     }),
@@ -167,42 +170,4 @@ export const NavLink = ({ children, className, activeClassName, ...props }) => {
     className: classNames,
     ...props,
   })
-}
-
-export class ErrorBoundary extends React.Component {
-  // static propTypes = {
-  //   resetKeys: PropTypes.arrayOf(PropTypes.any),
-  // }
-  static getDerivedStateFromError(error) {
-    return { error }
-  }
-
-  state = {}
-
-  componentDidCatch(error, info) {
-    this.props.onError?.(error, info)
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    const { error } = this.state
-    const { resetKeys } = this.props
-    if (
-      error !== null &&
-      prevState.error !== null &&
-      changedArray(prevProps.resetKeys, resetKeys)
-    ) {
-      this.setState({});
-    }
-  }
-
-  render() {
-    const { error } = this.state;
-    const { children, fallback } = this.props;
-    if (error) {
-      if (React.isValidElement(fallback)) {
-        return fallback;
-      }
-    }
-    return children;
-  }
 }
