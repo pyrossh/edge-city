@@ -7,7 +7,6 @@ import { ErrorBoundary } from "react-error-boundary";
 export const domain = () => typeof window !== 'undefined' ? window.origin : "http://0.0.0.0:3000";
 
 export const rpc = (serviceName) => async (params = {}) => {
-  console.log('serviceName', serviceName);
   const res = await fetch(`${domain()}/services/${serviceName}`, {
     method: "POST",
     headers: {
@@ -29,7 +28,7 @@ export const RpcContext = createContext(undefined);
 //     });
 // }
 
-export const useCache = (k) => {
+export const useRpcCache = (k) => {
   const ctx = useContext(RpcContext);
   const [_, rerender] = useState(false);
   const get = () => ctx[k]
@@ -54,11 +53,10 @@ export const useCache = (k) => {
  * @param {*} params 
  * @returns 
  */
-export const useRpc = (fn, params) => {
+export const useQuery = (fn, params) => {
   const [isRefetching, setIsRefetching] = useState(false);
   const [err, setErr] = useState(null);
-  const key = `${fn.name}:${JSON.stringify(params)}`;
-  const cache = useCache(key);
+  const cache = useRpcCache(`${fn.name}:${JSON.stringify(params)}`);
   const refetch = useCallback(async () => {
     try {
       setIsRefetching(true);
@@ -70,7 +68,7 @@ export const useRpc = (fn, params) => {
     } finally {
       setIsRefetching(false);
     }
-  }, [key])
+  }, [fn]);
   const value = cache.get();
   if (value) {
     if (value instanceof Promise) {
@@ -82,6 +80,28 @@ export const useRpc = (fn, params) => {
   }
   cache.set(fn(params).then((v) => cache.set(v)));
   throw cache.get();
+}
+
+export const useMutation = (fn) => {
+  const [isMutating, setIsMutating] = useState(false);
+  const [err, setErr] = useState(null);
+  const mutate = useCallback(async (params) => {
+    try {
+      setIsMutating(true);
+      setErr(null);
+      await fn(params);
+    } catch (err) {
+      setErr(err)
+      throw err;
+    } finally {
+      setIsMutating(false);
+    }
+  }, [fn])
+  return {
+    mutate,
+    isMutating,
+    err,
+  }
 }
 
 export const RouterContext = createContext(undefined);
