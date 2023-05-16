@@ -5,6 +5,11 @@ export const getTodos = async () => {
   return await db.select().from(todos).orderBy(asc(todos.id));
 }
 
+/**
+ * 
+ * @param {typeof todos} item 
+ * @returns 
+ */
 export const createTodo = async (item) => {
   return await db.insert(todos).values(item).returning();
 }

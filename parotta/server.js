@@ -149,7 +149,7 @@ const renderPage = async (url) => {
   }, {})
   const components = mapDeps("components");
   const importMap = {
-    "radix3": `https://esm.sh/radix3`,
+    "radix3": `https://esm.sh/radix3@1.0.1`,
     "history": "https://esm.sh/history@5.3.0",
     "react": `https://esm.sh/react@18.2.0${devTag}`,
     // TODO: need to remove this in prod
@@ -239,9 +239,9 @@ const renderJs = async (srcFile) => {
         addRpcImport = true;
         const [importName, serviceName] = ln.match(/\@\/services\/(.*)\.service/);
         const funcsText = ln.replace(`from "${importName}"`, "").replace("import", "").replace("{", "").replace("}", "").replace(";", "");
-        const funcsName = funcsText.trim().split(",");
+        const funcsName = funcsText.split(",");
         funcsName.forEach((fnName) => {
-          lines.push(`const ${fnName} = rpc("${serviceName}/${fnName}")`);
+          lines.push(`const ${fnName} = rpc("${serviceName}/${fnName.trim()}")`);
         })
       }
     })
@@ -295,7 +295,6 @@ const server = async (req) => {
     return renderJs(path.join(process.cwd(), url.pathname));
   }
   const match = serverRouter.lookup(url.pathname);
-  // TODO: maybe remove this as renderPage would handle it in clientRouter
   if (match && !match.key.includes("/_")) {
     if (match.file) {
       return sendFile(path.join(process.cwd(), `/static${match.file}`));

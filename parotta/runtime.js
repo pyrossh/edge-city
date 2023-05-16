@@ -1,5 +1,5 @@
 import React, {
-  Suspense, createElement, createContext, useContext, useState, useEffect, useTransition
+  Suspense, createElement, createContext, useContext, useState, useEffect, useTransition, useCallback
 } from "react";
 import { HelmetProvider } from 'react-helmet-async';
 import { ErrorBoundary } from "react-error-boundary";
@@ -7,6 +7,7 @@ import { ErrorBoundary } from "react-error-boundary";
 export const domain = () => typeof window !== 'undefined' ? window.origin : "http://0.0.0.0:3000";
 
 export const rpc = (serviceName) => async (params = {}) => {
+  console.log('serviceName', serviceName);
   const res = await fetch(`${domain()}/services/${serviceName}`, {
     method: "POST",
     headers: {
@@ -19,20 +20,26 @@ export const rpc = (serviceName) => async (params = {}) => {
 }
 
 export const RpcContext = createContext(undefined);
-export const useCache = () => {
-  const [_, rerender] = useState(false);
+// global way to refresh maybe without being tied to a hook like refetch
+// const invalidate = (regex) => {
+//   Object.keys(ctx)
+//     .filter((k) => regex.test(k))
+//     .forEach((k) => {
+//       fetchData(k).then((v) => set(k, v));
+//     });
+// }
+
+export const useCache = (k) => {
   const ctx = useContext(RpcContext);
-  const get = (k) => ctx[k]
-  const set = (k, v) => {
+  const [_, rerender] = useState(false);
+  const get = () => ctx[k]
+  const set = (v) => {
     ctx[k] = v;
     rerender((c) => !c);
   }
-  const invalidate = (regex) => {
-    Object.keys(ctx)
-      .filter((k) => regex.test(k))
-      .forEach((k) => {
-        fetchData(k).then((v) => set(k, v));
-      });
+  const invalidate = () => {
+    ctx[k] = undefined;
+    rerender((c) => !c);
   }
   return {
     get,
@@ -41,20 +48,40 @@ export const useCache = () => {
   }
 }
 
+/**
+ * 
+ * @param {*} fn 
+ * @param {*} params 
+ * @returns 
+ */
 export const useRpc = (fn, params) => {
-  const cache = useCache();
+  const [isRefetching, setIsRefetching] = useState(false);
+  const [err, setErr] = useState(null);
   const key = `${fn.name}:${JSON.stringify(params)}`;
-  const value = cache.get(key);
+  const cache = useCache(key);
+  const refetch = useCallback(async () => {
+    try {
+      setIsRefetching(true);
+      setErr(null);
+      cache.set(await fn(params));
+    } catch (err) {
+      setErr(err);
+      throw err;
+    } finally {
+      setIsRefetching(false);
+    }
+  }, [key])
+  const value = cache.get();
   if (value) {
     if (value instanceof Promise) {
       throw value;
     } else if (value instanceof Error) {
       throw value;
     }
-    return { data: value, cache };
+    return { data: value, isRefetching, err, refetch };
   }
-  cache.set(key, fn(params).then((v) => cache.set(key, v)));
-  throw cache.get(key);
+  cache.set(fn(params).then((v) => cache.set(v)));
+  throw cache.get();
 }
 
 export const RouterContext = createContext(undefined);
