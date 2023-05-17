@@ -19,14 +19,18 @@ export const rpc = (serviceName) => async (params = {}) => {
 }
 
 export const RpcContext = createContext(undefined);
+
 // global way to refresh maybe without being tied to a hook like refetch
-// const invalidate = (regex) => {
-//   Object.keys(ctx)
-//     .filter((k) => regex.test(k))
-//     .forEach((k) => {
-//       fetchData(k).then((v) => set(k, v));
-//     });
-// }
+export const useInvalidate = () => {
+  const ctx = useContext(RpcContext);
+  return (regex) => {
+    Object.keys(ctx)
+      .filter((k) => regex.test(k))
+      .forEach((k) => {
+        delete ctx[k];
+      });
+  }
+}
 
 export const useRpcCache = (k) => {
   const ctx = useContext(RpcContext);
@@ -37,7 +41,7 @@ export const useRpcCache = (k) => {
     rerender((c) => !c);
   }
   const invalidate = () => {
-    ctx[k] = undefined;
+    delete ctx[k];
     rerender((c) => !c);
   }
   return {
@@ -49,19 +53,19 @@ export const useRpcCache = (k) => {
 
 /**
  * 
- * @param {*} fn 
+ * @param {*} fn
  * @param {*} params 
  * @returns 
  */
-export const useQuery = (fn, params) => {
+export const useQuery = (key, fn) => {
   const [isRefetching, setIsRefetching] = useState(false);
   const [err, setErr] = useState(null);
-  const cache = useRpcCache(`${fn.name}:${JSON.stringify(params)}`);
+  const cache = useRpcCache(key);
   const refetch = useCallback(async () => {
     try {
       setIsRefetching(true);
       setErr(null);
-      cache.set(await fn(params));
+      cache.set(await fn());
     } catch (err) {
       setErr(err);
       throw err;
@@ -78,7 +82,7 @@ export const useQuery = (fn, params) => {
     }
     return { data: value, isRefetching, err, refetch };
   }
-  cache.set(fn(params).then((v) => cache.set(v)));
+  cache.set(fn().then((v) => cache.set(v)));
   throw cache.get();
 }
 

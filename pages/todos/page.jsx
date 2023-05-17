@@ -1,6 +1,7 @@
-import React, { Suspense, useState } from 'react';
+import React, { Suspense } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useQuery, useMutation } from "parotta/runtime";
+import { useForm } from 'react-hook-form';
 import Todo from "@/components/Todo/Todo";
 import { TextField, Label, Input } from 'react-aria-components';
 import { Button } from 'react-aria-components';
@@ -9,8 +10,8 @@ import Layout from '@/components/Layout/Layout';
 import "./page.css";
 
 const TodoList = () => {
-  const { data, refetch } = useQuery(getTodos, {});
-  const { mutate, isMutating } = useMutation(async () => {
+  const { data, refetch } = useQuery("todos", () => getTodos());
+  const { mutate, isMutating } = useMutation(async ({ text }) => {
     await createTodo({
       text,
       completed: false,
@@ -18,7 +19,7 @@ const TodoList = () => {
     })
     await refetch();
   });
-  const [text, setText] = useState();
+  const { register, handleSubmit, formState: { errors } } = useForm();
   return (
     <div>
       <ul>
@@ -26,16 +27,17 @@ const TodoList = () => {
           <Todo key={item.id} todo={item} />
         ))}
       </ul>
-      <div>
+      <form onSubmit={handleSubmit(mutate)}>
         <TextField isRequired isReadOnly={isMutating}>
           <Label>Text (required)</Label>
-          <Input value={text} onChange={(e) => setText(e.target.value)} />
+          <Input {...register('text', { required: true })} />
+          {errors.text && <p>Please enter some text</p>}
         </TextField>
-        <Button onPress={mutate} isDisabled={isMutating}>Add Todo</Button>
+        <Button type="submit" isDisabled={isMutating}>Add Todo</Button>
         {isMutating && <div>
           <p>Creating...</p>
         </div>}
-      </div>
+      </form>
     </div>
   )
 }
