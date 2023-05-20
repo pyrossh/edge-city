@@ -331,3 +331,23 @@ export const renderPage = async (PageComponent, req) => {
     status: 200,
   });
 }
+
+export const renderApi = async (key, filePath, req) => {
+  const url = new URL(req.url);
+  const params = req.method === "POST" ? await req.json() : Object.fromEntries(url.searchParams);
+  const funcName = url.pathname.replace(`${key}/`, "");
+  const js = await import(path.join(process.cwd(), filePath));
+  try {
+    const result = await js[funcName](params);
+    return new Response(JSON.stringify(result), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200,
+    });
+  } catch (err) {
+    const message = err.format ? err.format() : err;
+    return new Response(JSON.stringify(message), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 400,
+    });
+  }
+}

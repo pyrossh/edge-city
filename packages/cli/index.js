@@ -44,12 +44,7 @@ const isProd = process.env.NODE_ENV === "production";
 const routes = walkdir.sync(path.join(process.cwd(), "pages"))
   .filter((p) => p.includes("page.jsx"));
 const services = walkdir.sync(path.join(process.cwd(), "services"))
-  .map((s) => s.replace(process.cwd(), ""))
   .filter((s) => s.includes(".service.js"))
-  .forEach((s) => {
-    const serviceName = s.replace(".service.js", "");
-    routes[serviceName + "/*"] = { key: serviceName, service: s };
-  });
 
 const mapDeps = (dir) => {
   return walkdir.sync(path.join(process.cwd(), dir))
@@ -121,20 +116,21 @@ const buildRouteMap = () => {
 // });
 
 
-const buildServer = async (r) => {
+const buildServer = async (src, type) => {
   const buildStart = Date.now();
-  const shortName = r.replace(process.cwd(), "").replace("/pages", "");
-  const outfile = `${process.cwd()}/build/functions${shortName.replace("page.jsx", "index.js")}`;
+  const shortName = src.replace(process.cwd(), "");
+  const outName = type === "service" ? shortName.replace(".service.js", "") + "/index.js" : shortName.replace("/pages", "").replace("page.jsx", "index.js");
+  const outfile = `${process.cwd()}/build/functions${outName}`;
   const result = await esbuild.build({
     bundle: true,
     target: ['es2022'],
-    entryPoints: [r],
+    entryPoints: [src],
     outfile: outfile,
     format: 'esm',
     keepNames: true,
     external: ["node:*"],
     color: true,
-    treeShaking: false,
+    treeShaking: true,
     // metafile: true,
     jsxDev: !isProd,
     jsx: 'automatic',
@@ -156,90 +152,42 @@ const buildServer = async (r) => {
   );
 }
 
-const bundleBun = async (r) => {
-  const buildStart = Date.now();
-  const shortName = r.replace(process.cwd(), "").replace("/page.jsx", "");
-  const result = await Bun.build({
-    entrypoints: [r],
-    outdir: `${process.cwd()}/bb/functions/${shortName}`,
-  });
-  if (!result.success) {
-    console.error("Build failed");
-    for (const message of result.logs) {
-      // Bun will pretty print the message object
-      console.error(message);
-    }
-  }
-  for (const o of result.outputs) {
-    const outLength = (await o.arrayBuffer()).byteLength;
-    const builtTime = ms(Date.now() - buildStart);
-    console.log(
-      `✓ Bundled ${o.kind} ${o.path.replace(process.cwd() + "/bb", "")} ${pc.cyan(`(${bytes(outLength)})`)} ${pc.gray(`[${builtTime}]`)}`
-    );
-  }
-}
+// const bundleBun = async (r, type) => {
+//   const buildStart = Date.now();
+//   const shortName =  r.replace(process.cwd(), "").replace("/page.jsx", "");
+//   const result = await Bun.build({
+//     entrypoints: [r],
+//     outdir: `${process.cwd()}/bb/functions/${shortName}`,
+//   });
+//   if (!result.success) {
+//     console.error("Build failed");
+//     for (const message of result.logs) {
+//       // Bun will pretty print the message object
+//       console.error(message);
+//     }
+//   }
+//   for (const o of result.outputs) {
+//     const outLength = (await o.arrayBuffer()).byteLength;
+//     const builtTime = ms(Date.now() - buildStart);
+//     console.log(
+//       `✓ Bundled ${o.kind} ${o.path.replace(process.cwd() + "/bb", "")} ${pc.cyan(`(${bytes(outLength)})`)} ${pc.gray(`[${builtTime}]`)}`
+//     );
+//   }
+// }
 
 const main = async () => {
   createDirs();
   buildImportMap();
   buildRouteMap();
   for (const r of routes) {
-    buildServer(r);
+    await buildServer(r, "page");
+  }
+  for (const s of services) {
+    await buildServer(s, "service");
   }
 }
 
 main();
-
-// const createServerRouter = async () => {
-//   const routes = {};
-//   const dirs = walkdir.sync(path.join(process.cwd(), "pages"))
-//     .map((s) => s.replace(process.cwd(), "")
-//       .replace("/pages", "")
-//       // .replaceAll("[", ":")
-//       // .replaceAll("]", "")
-//     )
-
-//   dirs.filter((p) => p.includes('page.jsx'))
-//     .map((s) => ({ path: s, route: s.replace("/page.jsx", "") }))
-//     .forEach((page) => {
-//       const key = page.route || "/";
-//       routes[key] = { key: key, page: page.path };
-//     });
-//   walkdir.sync(path.join(process.cwd(), "static"))
-//     .map((s) => s.replace(process.cwd(), "").replace("/static", ""))
-//     .forEach((route) => {
-//       routes[route] = { key: route, file: route }
-//     });
-
-//   return createRouter({
-//     strictTrailingSlash: true,
-//     routes: routes,
-//   });
-// }
-
-// const createClientRouter = async () => {
-//   const routes = await walkdir.sync(path.join(process.cwd(), "pages"))
-//     .filter((p) => p.includes("page.jsx"))
-//     .filter((p) => !p.includes("/_"))
-// .map((s) => s.replace(process.cwd(), ""))
-// .map((s) => s.replace("/pages", ""))
-// .map((s) => s.replace("/page.jsx", ""))
-//     .reduce(async (accp, r) => {
-//       const acc = await accp;
-//       const src = await import(`${process.cwd()}/pages${r}/page.jsx`);
-//       if (!result.success) {
-//         console.error("Build failed");
-//         for (const message of result.logs) {
-//           // Bun will pretty print the message object
-//           console.error(message);
-//         }
-//       }
-//       acc[r === "" ? "/" : r] = src.default;
-//       return acc
-//     }, Promise.resolve({}));
-//   // console.log(clientRoutes);
-// };
-
 
 // const serverRouter = await createServerRouter();
 // const clientRouter = await createClientRouter();
@@ -252,27 +200,6 @@ main();
 //   // autoImportJSX: false,
 //   // jsxOptimizationInline: false,
 // });
-
-// const renderApi = async (key, filePath, req) => {
-//   const url = new URL(req.url);
-//   const params = req.method === "POST" ? await req.json() : Object.fromEntries(url.searchParams);
-//   const funcName = url.pathname.replace(`${key}/`, "");
-//   const js = await import(path.join(process.cwd(), filePath));
-//   try {
-//     const result = await js[funcName](params);
-//     return new Response(JSON.stringify(result), {
-//       headers: { 'Content-Type': 'application/json' },
-//       status: 200,
-//     });
-//   } catch (err) {
-//     const message = err.format ? err.format() : err;
-//     return new Response(JSON.stringify(message), {
-//       headers: { 'Content-Type': 'application/json' },
-//       status: 400,
-//     });
-//   }
-
-// }
 
 // const renderCss = async (src) => {
 //   try {
@@ -335,67 +262,3 @@ main();
 //     });
 //   }
 // }
-
-// const sendFile = async (src) => {
-//   try {
-//     const contentType = mimeTypes.lookup(src) || "application/octet-stream";
-//     const stream = await Bun.file(src).stream();
-//     return new Response(stream, {
-//       headers: { 'Content-Type': contentType },
-//       status: 200,
-//     });
-//   } catch (err) {
-//     return new Response(`Not Found`, {
-//       headers: { 'Content-Type': 'text/html' },
-//       status: 404,
-//     });
-//   }
-// }
-
-// // const mf = new Miniflare({
-// //   script: `
-// //   addEventListener("fetch", (event) => {
-// //     event.respondWith(new Response("Hello Miniflare!"));
-// //   });
-// //   `,
-// // });
-// // const res = await mf.dispatchFetch("http://localhost:3000/");
-// // console.log(await res.text()); // Hello Miniflare!
-
-// const server = async (req) => {
-//   const url = new URL(req.url);
-//   console.log(req.method, url.pathname);
-//   // maybe this is needed
-//   if (url.pathname.startsWith("/parotta/")) {
-//     return renderJs(path.join(import.meta.dir, url.pathname.replace("/parotta/", "")));
-//   }
-//   if (url.pathname.endsWith(".css")) {
-//     return renderCss(path.join(process.cwd(), url.pathname));
-//   }
-//   if (url.pathname.endsWith(".js") || url.pathname.endsWith(".jsx")) {
-//     return renderJs(path.join(process.cwd(), url.pathname));
-//   }
-//   const match = serverRouter.lookup(url.pathname);
-//   if (match && !match.key.includes("/_")) {
-//     if (match.file) {
-//       return sendFile(path.join(process.cwd(), `/static${match.file}`));
-//     }
-//     if (match.page && req.headers.get("Accept")?.includes('text/html')) {
-//       return renderPage(url);
-//     }
-//     if (match.service) {
-//       return renderApi(match.key, match.service, req);
-//     }
-//   }
-//   if (req.headers.get("Accept")?.includes('text/html')) {
-//     // not found html page
-//     return renderPage(new URL(`${url.protocol}//${url.host}/_404`));
-//   }
-//   // not found generic page
-//   return new Response(`{"message": "not found"}`, {
-//     headers: { 'Content-Type': 'application/json' },
-//     status: 404,
-//   });
-// }
-
-// export default server;
