@@ -1,11 +1,16 @@
 import React, {
-  Suspense, createElement, createContext, useContext, useState, useEffect, useTransition, useCallback
+  Suspense, createContext, useContext, useState, useEffect, useTransition, useCallback
 } from "react";
+import { jsx as _jsx } from "react/jsx-runtime";
+import { jsxs as _jsxs } from "react/jsx-runtime";
+import { Fragment as _Fragment } from "react/jsx-runtime";
+import { renderToReadableStream } from "react-dom/server";
 import { HelmetProvider } from 'react-helmet-async';
 import { ErrorBoundary } from "react-error-boundary";
 import { createMemoryHistory } from "history";
 import { createRouter } from "radix3";
-import routes from '/static/routemap.json' assert {type: 'json'};
+import importmap from '/static/importmap.json' assert {type: 'json'};
+import routemap from '/static/routemap.json' assert {type: 'json'};
 
 /**
  * CSR related functions
@@ -127,9 +132,14 @@ const getMatch = (radixRouter, pathname) => {
 
 const getCssUrl = (pathname) => `/pages${pathname === "/" ? "" : pathname}/page.css`;
 
-export const App = ({ nProgress, history, radixRouter, rpcCache, helmetContext }) => {
+export const App = ({ nProgress, history, radixRouter, rpcCache, helmetContext, PageComponent }) => {
   const [isPending, startTransition] = useTransition();
-  const [match, setMatch] = useState(() => getMatch(radixRouter, history.location.pathname));
+  const [match, setMatch] = useState(() => {
+    if (PageComponent) {
+      return PageComponent;
+    }
+    return getMatch(radixRouter, history.location.pathname)
+  });
   useEffect(() => {
     return history.listen(({ location }) => {
       const href = getCssUrl(location.pathname);
@@ -165,21 +175,21 @@ export const App = ({ nProgress, history, radixRouter, rpcCache, helmetContext }
       nProgress.done();
     }
   }, [isPending]);
-  return createElement(HelmetProvider, {
+  return _jsx(HelmetProvider, {
     context: helmetContext,
-    children: createElement(RpcContext.Provider, {
+    children: _jsx(RpcContext.Provider, {
       value: rpcCache,
-      children: createElement(RouterContext.Provider, {
+      children: _jsx(RouterContext.Provider, {
         value: {
           history: history,
           params: match.params || {},
         },
-        children: createElement(ErrorBoundary, {
+        children: _jsx(ErrorBoundary, {
           onError: (err) => console.log(err),
-          fallback: createElement("p", {}, "Oops something went wrong"),
-          children: createElement(Suspense, {
-            fallback: createElement("p", {}, "Loading..."),
-            children: createElement(match, {}),
+          fallback: _jsx("p", {}, "Oops something went wrong"),
+          children: _jsx(Suspense, {
+            fallback: _jsx("p", {}, "Loading..."),
+            children: _jsx(match, {}),
           }),
         }),
       }),
@@ -203,7 +213,7 @@ export const useRouter = () => {
 
 export const Link = (props) => {
   const router = useRouter();
-  return createElement("a", {
+  return _jsx("a", {
     ...props,
     onMouseOver: (e) => {
       // Simple prefetching for now will work only with cache headers
@@ -223,7 +233,7 @@ export const Link = (props) => {
 export const NavLink = ({ children, className, activeClassName, ...props }) => {
   const { pathname } = useRouter();
   const classNames = pathname === props.href ? [activeClassName, className] : [className];
-  return createElement(Link, {
+  return _jsx(Link, {
     children,
     className: classNames,
     ...props,
@@ -233,10 +243,11 @@ export const NavLink = ({ children, className, activeClassName, ...props }) => {
 /**
  * SSR related functions
  */
-export const renderPage = async () => {
+export const renderPage = async (PageComponent, req) => {
+  const url = new URL(req.url);
   const clientRouter = createRouter({
     strictTrailingSlash: true,
-    routes: Object.keys(routes).reduce((acc, r) => {
+    routes: Object.keys(routemap).reduce((acc, r) => {
       acc[r] = React.lazy(() => import(`/pages${r}/page.jsx`));
       return acc;
     }, {}),
@@ -246,63 +257,70 @@ export const renderPage = async () => {
   });
   const helmetContext = {}
   const nProgress = { start: () => { }, done: () => { } }
-  // const stream = await renderToReadableStream(
-  //   <html lang="en">
-  //     <head>
-  //       <link rel="stylesheet" href="https://unpkg.com/nprogress@0.2.0/nprogress.css" />
-  //       <link id="pageCss" rel="stylesheet" href={`/pages${url.pathname}/page.css`} />
-  //       <script type="importmap" src="/static/importmap.json" />
-  //     </head>
-  //     <body>
-  //       <App
-  //         nProgress={nProgress}
-  //         history={history}
-  //         radixRouter={clientRouter}
-  //         rpcCache={{}}
-  //         helmetContext={helmetContext}
-  //       />
-  //       {false &&
-  //         <>
-  //           <script type="module" defer={true} dangerouslySetInnerHTML={{
-  //             __html: `
-  //             import React from "react";
-  //             import { hydrateRoot } from "react-dom/client";
-  //             import { createBrowserHistory } from "history";
-  //             import nProgress from "nprogress";
-  //             import { createRouter } from "radix3";
-  //             import { App } from "parotta/runtime";
-  //             import routes from '/static/routemap.json' assert {type: 'json'};
-  //             // import sheet from './styles.css' assert { type: 'css' };
+  const stream = await renderToReadableStream(
+    _jsxs("html", {
+      lang: "en",
+      children: [_jsxs("head", {
+        children: [
+          // _jsx("link", {
+          //   rel: "stylesheet",
+          //   href: "https://unpkg.com/nprogress@0.2.0/nprogress.css"
+          // }),
+          // _jsx("link", {
+          //   id: "pageCss",
+          //   rel: "stylesheet",
+          //   href: `/pages${url.pathname}/page.css`
+          // }),
+          _jsx("script", {
+            type: "importmap",
+            dangerouslySetInnerHTML: {
+              __html: JSON.stringify(importmap),
+            }
+          })]
+      }), _jsxs("body", {
+        children: [_jsx(App, {
+          nProgress,
+          history,
+          radixRouter: clientRouter,
+          rpcCache: {},
+          helmetContext,
+          PageComponent,
+        }), false && _jsx(_Fragment, {
+          children: _jsx("script", {
+            type: "module",
+            defer: true,
+            dangerouslySetInnerHTML: {
+              __html: `
+              import React from "react";
+              import { hydrateRoot } from "react-dom/client";
+              import { createBrowserHistory } from "history";
+              import nProgress from "nprogress";
+              import { createRouter } from "radix3";
+              import { App } from "parotta/runtime";
+              import routemap from '/static/routemap.json' assert {type: 'json'};
+              // import sheet from './styles.css' assert { type: 'css' };
 
-  //             const history = createBrowserHistory();
-  //             const radixRouter = createRouter({
-  //               strictTrailingSlash: true,
-  //               routes: {
-  //                 ${Object.keys(routes).map((r) => `"${r}": React.lazy(() => import("/pages${r}/page.jsx"))`).join(',\n      ')}
-  //               },
-  //             });
+              const history = createBrowserHistory();
+              const radixRouter = createRouter({
+                strictTrailingSlash: true,
+                routes: {
+                  ${Object.keys(routemap).map(r => `"${r}": React.lazy(() => import("/pages${r}/page.jsx"))`).join(',\n      ')}
+                },
+              });
 
-  //             hydrateRoot(document.body, React.createElement(App, {
-  //               nProgress,
-  //               history,
-  //               radixRouter,
-  //               rpcCache: {},
-  //               helmetContext: {},
-  //             }));`
-  //           }}>
-  //           </script>
-  //         </>
-  //       }
-  //     </body>
-  //   </html>
-  // );
-  const stream = await renderToReadableStream(React.createElement(App, {
-    nProgress,
-    history,
-    radixRouter: clientRouter,
-    rpcCache: {},
-    helmetContext: helmetContext,
-  }));
+              hydrateRoot(document.body, React.createElement(App, {
+                nProgress,
+                history,
+                radixRouter,
+                rpcCache: {},
+                helmetContext: {},
+                PageComponent: null,
+              }));`
+            }
+          })
+        })]
+      })]
+    }));
   // TODO:
   // if (bot || isCrawler) {
   //  await stream.allReady

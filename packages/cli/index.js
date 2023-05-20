@@ -1,10 +1,8 @@
 #!/usr/bin/env bun
 import meow from 'meow';
-import React from "react";
 import esbuild from 'esbuild';
 import resolve from 'esbuild-plugin-resolve';
-import { renderToReadableStream } from "react-dom/server";
-import fs, { mkdir } from "fs";
+import fs from "fs";
 import path from 'path';
 import walkdir from 'walkdir';
 import postcss from "postcss"
@@ -87,14 +85,16 @@ const buildImportMap = async () => {
   }, {})
   const components = mapDeps("components");
   const importmap = {
-    "radix3": `https://esm.sh/radix3@1.0.1`,
-    "history": "https://esm.sh/history@5.3.0",
-    "react": `https://esm.sh/react@18.2.0${devQueryParam}`,
-    [`react/jsx${devTag}runtime`]: `https://esm.sh/react@18.2.0${devQueryParam}/jsx${devTag}runtime`,
-    "react-dom/client": `https://esm.sh/react-dom@18.2.0${devQueryParam}/client`,
-    "nprogress": "https://esm.sh/nprogress@0.2.0",
-    ...nodeDeps,
-    ...components,
+    "imports": {
+      "radix3": `https://esm.sh/radix3@1.0.1`,
+      "history": "https://esm.sh/history@5.3.0",
+      "react": `https://esm.sh/react@18.2.0${devQueryParam}`,
+      [`react/jsx${devTag}runtime`]: `https://esm.sh/react@18.2.0${devQueryParam}/jsx${devTag}runtime`,
+      "react-dom/client": `https://esm.sh/react-dom@18.2.0${devQueryParam}/client`,
+      "nprogress": "https://esm.sh/nprogress@0.2.0",
+      ...nodeDeps,
+      ...components,
+    }
   }
   const outfile = path.join(staticDir, "importmap.json");
   fs.writeFileSync(outfile, JSON.stringify(importmap, null, 2));
@@ -111,6 +111,16 @@ const buildRouteMap = () => {
   fs.writeFileSync(outfile, JSON.stringify(routemap, null, 2));
 }
 
+// const EsbuildPluginResolve = (options) => ({
+//   name: 'esbuild-resolve',
+//   setup: (build) => {
+//     for (const moduleName of Object.keys(options)) {
+//       intercept(build, moduleName, options[moduleName]);
+//     }
+//   }
+// });
+
+
 const buildServer = async (r) => {
   const buildStart = Date.now();
   const shortName = r.replace(process.cwd(), "").replace("/pages", "");
@@ -124,16 +134,19 @@ const buildServer = async (r) => {
     keepNames: true,
     external: ["node:*"],
     color: true,
-    treeShaking: true,
+    treeShaking: false,
     // metafile: true,
     jsxDev: !isProd,
     jsx: 'automatic',
     define: {
       'process.env.NODE_ENV': `"${process.env.NODE_ENV}"`,
     },
-    plugins: [resolve({
-      "/static/routemap.json": `${staticDir}/routemap.json`
-    })]
+    plugins: [
+      resolve({
+        "/static/routemap.json": `${staticDir}/routemap.json`,
+        "/static/importmap.json": `${staticDir}/importmap.json`
+      }),
+    ]
   });
   // console.log(await analyzeMetafile(result.metafile))
   const outLength = fs.statSync(outfile).size;
