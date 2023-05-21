@@ -4,7 +4,7 @@ import "./page.css";
 
 const Page = () => {
   return (
-    <div>
+    <div className="err-page">
       <Helmet>
         <title>Oop's Something went wrong</title>
       </Helmet>

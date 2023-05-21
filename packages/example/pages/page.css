@@ -1,17 +1,8 @@
-body {
-  margin: 0;
-  padding: 20px;
-  margin: 0;
-  background-color: turquoise;
-
+.home-page {
   & .count {
     color: black;
     padding: 40px;
     font-size: 30px;
     font-weight: 600;
-  }
-
-  & footer {
-    margin-top: 100px;
   }
 }

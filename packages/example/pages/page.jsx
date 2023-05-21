@@ -15,7 +15,7 @@ const Page = () => {
       <Helmet>
         <title>Parotta App</title>
       </Helmet>
-      <div>
+      <div className="home-page">
         <h1>Home Page</h1>
         <p>
           Path: {router.pathname}

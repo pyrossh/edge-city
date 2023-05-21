@@ -1,8 +1,7 @@
-body {
+.about-page {
   margin: 0;
   padding: 20px;
   padding-bottom: 130px;
-  background-color: violet;
 
   & footer {
     margin-top: 100px;

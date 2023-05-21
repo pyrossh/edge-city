@@ -61,6 +61,9 @@ importers:
       normalize.css:
         specifier: ^8.0.1
         version: 8.0.1
+      nprogress:
+        specifier: 0.2.0
+        version: 0.2.0
       parotta-runtime:
         specifier: workspace:*
         version: link:../runtime
@@ -5022,6 +5025,10 @@ packages:
 
   /normalize.css@8.0.1:
     resolution: {integrity: sha512-qizSNPO93t1YUuUhP22btGOo3chcvDFqFaj2TRybP0DMxkHOCTYwp3n34fel4a31ORXy4m1Xq0Gyqpb5m33qIg==}
+    dev: false
+
+  /nprogress@0.2.0:
+    resolution: {integrity: sha512-I19aIingLgR1fmhftnbWWO3dXc0hSxqHQHQb3H8m+K3TnEn/iSeTZZOyvKXWqQESMwuUVnatlCnZdLBZZt2VSA==}
     dev: false
 
   /object-assign@4.1.1:

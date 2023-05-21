@@ -65,9 +65,9 @@ const staticDir = path.join(process.cwd(), "build", "static");
 
 const createDirs = () => {
   const buildDir = path.join(process.cwd(), "build");
-  if (fs.existsSync(buildDir)) {
-    fs.rmSync(buildDir, { recursive: true });
-  }
+  // if (fs.existsSync(buildDir)) {
+  //   fs.rmSync(buildDir, { recursive: true });
+  // }
   if (!fs.existsSync(staticDir)) {
     fs.mkdirSync(staticDir, { recursive: true });
   }
@@ -110,34 +110,15 @@ const buildRouteMap = () => {
   fs.writeFileSync(outfile, JSON.stringify(routemap, null, 2));
 }
 
-// let envPlugin = {
-//   name: 'env',
-//   setup(build) {
-//     // Intercept import paths called "env" so esbuild doesn't attempt
-//     // to map them to a file system location. Tag them with the "env-ns"
-//     // namespace to reserve them for this plugin.
-//     build.onResolve({ filter: /^env$/ }, args => ({
-//       path: args.path,
-//       namespace: 'env-ns',
-//     }))
-
-//     // Load paths tagged with the "env-ns" namespace and behave as if
-//     // they point to a JSON file containing the environment variables.
-//     build.onLoad({ filter: /.*/, namespace: 'env-ns' }, () => ({
-//       contents: JSON.stringify(process.env),
-//       loader: 'json',
-//     }))
-//   },
-// }
-
-
+let generatedCss = ``;
+const cssCache = [];
 const buildServer = async (src, type) => {
   const buildStart = Date.now();
   const shortName = src.replace(process.cwd(), "");
   const outName = type === "service"
-    ? "/_rpc" + shortName.replace("/services", "").replace(".service.js", ".js")
-    : shortName.replace("/pages", "").replace("page.jsx", "index.js");
-  const outfile = `${process.cwd()}/build/functions${outName}`;
+    ? "/_rpc" + shortName.replace("/services", "").replace(".service.js", "")
+    : shortName.replace("/pages", "").replace("/page.jsx", "") || "/index";
+  const outfile = `${process.cwd()}/build/functions${outName}.js`;
   const result = await esbuild.build({
     bundle: true,
     target: ['es2022'],
@@ -148,6 +129,7 @@ const buildServer = async (src, type) => {
     external: ["node:*"],
     color: true,
     treeShaking: true,
+    // loader: { '.json': 'copy' },
     // metafile: true,
     jsxDev: !isProd,
     jsx: 'automatic',
@@ -176,6 +158,17 @@ const buildServer = async (src, type) => {
             return {
               contents: newSrc,
               loader: "jsx",
+            }
+          });
+          build.onLoad({ filter: /\\*.css/, namespace: undefined }, (args) => {
+            if (!cssCache[args.path]) {
+              const css = fs.readFileSync(args.path);
+              generatedCss += css + "\n\n";
+              cssCache[args.path] = true;
+            }
+            return {
+              contents: "",
+              loader: "file",
             }
           });
         }
@@ -223,6 +216,7 @@ const main = async () => {
   for (const s of services) {
     await buildServer(s, "service");
   }
+  fs.writeFileSync(`${process.cwd()}/build/static/app.css`, generatedCss);
 }
 
 main();

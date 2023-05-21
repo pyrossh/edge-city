@@ -263,15 +263,10 @@ export const renderPage = async (PageComponent, req) => {
       lang: "en",
       children: [_jsxs("head", {
         children: [
-          // _jsx("link", {
-          //   rel: "stylesheet",
-          //   href: "https://unpkg.com/nprogress@0.2.0/nprogress.css"
-          // }),
-          // _jsx("link", {
-          //   id: "pageCss",
-          //   rel: "stylesheet",
-          //   href: `/pages${url.pathname}/page.css`
-          // }),
+          _jsx("link", {
+            rel: "stylesheet",
+            href: "/app.css"
+          }),
           _jsx("script", {
             type: "importmap",
             dangerouslySetInnerHTML: {

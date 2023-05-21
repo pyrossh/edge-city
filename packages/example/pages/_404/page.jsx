@@ -4,7 +4,7 @@ import "./page.css";
 
 const Page = () => {
   return (
-    <div>
+    <div className="notfound-page">
       <Helmet>
         <title>Page not found</title>
       </Helmet>
