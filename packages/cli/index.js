@@ -40,10 +40,6 @@ if (!globalThis.firstRun) {
   console.log(`server reloading`);
 }
 const isProd = process.env.NODE_ENV === "production";
-const routes = walkdir.sync(path.join(process.cwd(), "pages"))
-  .filter((p) => p.includes("page.jsx"));
-const services = walkdir.sync(path.join(process.cwd(), "services"))
-  .filter((s) => s.includes(".service.js"))
 
 const mapDeps = (dir) => {
   return walkdir.sync(path.join(process.cwd(), dir))
@@ -108,11 +104,11 @@ const buildImportMap = async () => {
   fs.writeFileSync(outfile, JSON.stringify(importmap, null, 2));
 }
 
-const buildRouteMap = () => {
+const buildRouteMap = (routes) => {
   const routemap = routes.reduce((acc, p) => {
     const r = p.replace(process.cwd(), "");
     const key = r.replace("/pages", "").replace("/page.jsx", "")
-    acc[key === "" ? "/" : key] = r;
+    acc[key === "" ? "/" : key] = "/js" + (r.replace("/pages", "").replace("/page.jsx", "") || "/index") + ".js";
     return acc
   }, {});
   const outfile = path.join(staticDir, "routemap.json");
@@ -121,7 +117,7 @@ const buildRouteMap = () => {
 
 let generatedCss = ``;
 const cssCache = [];
-const buildServer = async (options, src, dest, plg) => {
+const bundleJs = async (options, src, dest, plg) => {
   const result = await esbuild.build({
     bundle: true,
     target: ['es2022'],
@@ -143,8 +139,8 @@ const buildServer = async (options, src, dest, plg) => {
     },
     plugins: [
       resolve({
-        "/static/routemap.json": `${staticDir}/routemap.json`,
-        "/static/importmap.json": `${staticDir}/importmap.json`
+        "/routemap.json": `${staticDir}/routemap.json`,
+        "/importmap.json": `${staticDir}/importmap.json`
       }),
       plg,
     ]
@@ -175,24 +171,15 @@ const buildServer = async (options, src, dest, plg) => {
 //   }
 // }
 
-const bundleCss = async () => {
-  const result = await postcss([
-    autoprefixer(),
-    postcssCustomMedia(),
-    postcssNesting,
-  ]).process(generatedCss, { from: "app.css", to: "app.css" });
-  fs.writeFileSync(`${process.cwd()}/build/static/app.css`, result.toString());
-}
-
-const main = async () => {
-  createDirs();
-  buildImportMap();
-  buildRouteMap();
+const bundlePages = async () => {
+  const routes = walkdir.sync(path.join(process.cwd(), "pages"))
+    .filter((p) => p.includes("page.jsx"));
+  buildRouteMap(routes);
   for (const r of routes) {
     const buildStart = Date.now();
     const dest = r.replace(process.cwd(), "").replace("/pages", "").replace("/page.jsx", "") || "/index";
     const outfile = `build/functions${dest}.js`;
-    await buildServer({}, r, outfile, {
+    await bundleJs({}, r, outfile, {
       name: "parotta-page-plugin",
       setup(build) {
         build.onLoad({ filter: /\\*.page.jsx/, namespace: undefined }, (args) => {
@@ -225,12 +212,44 @@ const main = async () => {
     });
     recordSize(buildStart, outfile);
   }
+  for (const r of routes) {
+    const buildStart = Date.now();
+    const dest = r.replace(process.cwd(), "").replace("/pages", "").replace("/page.jsx", "") || "/index";
+    const outfile = `build/static/js${dest}.js`;
+    await bundleJs({}, r, outfile, {
+      name: "parotta-page-js-plugin",
+      setup(build) {
+        build.onLoad({ filter: /\\*.page.jsx/, namespace: undefined }, (args) => {
+          const data = fs.readFileSync(args.path);
+          const newSrc = `
+            import { hydrateApp } from "parotta-runtime";
+            ${data.toString()}
+
+            const searchParams = new URL(import.meta.url).searchParams;
+            if (searchParams.get("hydrate") === "true") {
+              hydrateApp(Page)
+            }
+          `
+          return {
+            contents: newSrc,
+            loader: "jsx",
+          }
+        });
+      }
+    });
+    recordSize(buildStart, outfile);
+  }
+}
+
+const bundleServices = async () => {
+  const services = walkdir.sync(path.join(process.cwd(), "services"))
+    .filter((s) => s.includes(".service.js"));
   for (const s of services) {
     const dest = s.replace(process.cwd(), "").replace("/services", "").replace(".service.js", "")
     const pkg = await import(s);
     for (const p of Object.keys(pkg)) {
       const buildStart = Date.now();
-      const result = await buildServer({ write: false }, s, `build/functions/_rpc${dest}.js`, {
+      const result = await bundleJs({ write: false }, s, `build/functions/_rpc${dest}.js`, {
         name: "parotta-service-plugin",
         setup(build) {
           build.onLoad({ filter: /\\*.service.js/, namespace: undefined }, async (args) => {
@@ -273,7 +292,24 @@ const main = async () => {
       recordSize(buildStart, outfile);
     }
   }
-  bundleCss();
+}
+
+const bundleCss = async () => {
+  const result = await postcss([
+    autoprefixer(),
+    postcssCustomMedia(),
+    postcssNesting,
+  ]).process(generatedCss, { from: "app.css", to: "app.css" });
+  ensureDir(`build/static/css`)
+  fs.writeFileSync(`${process.cwd()}/build/static/css/app.css`, result.toString());
+}
+
+const main = async () => {
+  createDirs();
+  buildImportMap();
+  await bundlePages();
+  // await bundleServices();
+  await bundleCss();
 }
 
 main();
