@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useRouter, renderPage } from "parotta-runtime";
+import { Link, useRouter } from "parotta-runtime";
 import { Helmet } from 'react-helmet-async';
 import Layout from '@/components/Layout/Layout';
 import "./page.css";
@@ -26,7 +26,3 @@ export const Page = () => {
 }
 
 export default Page;
-
-export function onRequest(context) {
-  return renderPage(Page, context.request);
-}

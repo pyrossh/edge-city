@@ -64,6 +64,10 @@ const mapDeps = (dir) => {
 const staticDir = path.join(process.cwd(), "build", "static");
 
 const createDirs = () => {
+  const buildDir = path.join(process.cwd(), "build");
+  if (fs.existsSync(buildDir)) {
+    fs.rmSync(buildDir, { recursive: true });
+  }
   if (!fs.existsSync(staticDir)) {
     fs.mkdirSync(staticDir, { recursive: true });
   }
@@ -106,20 +110,33 @@ const buildRouteMap = () => {
   fs.writeFileSync(outfile, JSON.stringify(routemap, null, 2));
 }
 
-// const EsbuildPluginResolve = (options) => ({
-//   name: 'esbuild-resolve',
-//   setup: (build) => {
-//     for (const moduleName of Object.keys(options)) {
-//       intercept(build, moduleName, options[moduleName]);
-//     }
-//   }
-// });
+// let envPlugin = {
+//   name: 'env',
+//   setup(build) {
+//     // Intercept import paths called "env" so esbuild doesn't attempt
+//     // to map them to a file system location. Tag them with the "env-ns"
+//     // namespace to reserve them for this plugin.
+//     build.onResolve({ filter: /^env$/ }, args => ({
+//       path: args.path,
+//       namespace: 'env-ns',
+//     }))
+
+//     // Load paths tagged with the "env-ns" namespace and behave as if
+//     // they point to a JSON file containing the environment variables.
+//     build.onLoad({ filter: /.*/, namespace: 'env-ns' }, () => ({
+//       contents: JSON.stringify(process.env),
+//       loader: 'json',
+//     }))
+//   },
+// }
 
 
 const buildServer = async (src, type) => {
   const buildStart = Date.now();
   const shortName = src.replace(process.cwd(), "");
-  const outName = type === "service" ? shortName.replace(".service.js", "") + "/index.js" : shortName.replace("/pages", "").replace("page.jsx", "index.js");
+  const outName = type === "service"
+    ? "/_rpc" + shortName.replace("/services", "").replace(".service.js", ".js")
+    : shortName.replace("/pages", "").replace("page.jsx", "index.js");
   const outfile = `${process.cwd()}/build/functions${outName}`;
   const result = await esbuild.build({
     bundle: true,
@@ -136,12 +153,33 @@ const buildServer = async (src, type) => {
     jsx: 'automatic',
     define: {
       'process.env.NODE_ENV': `"${process.env.NODE_ENV}"`,
+      'process.env.PG_CONN_URL': "123",
     },
     plugins: [
       resolve({
         "/static/routemap.json": `${staticDir}/routemap.json`,
         "/static/importmap.json": `${staticDir}/importmap.json`
       }),
+      {
+        name: "parotta-plugin",
+        setup(build) {
+          build.onLoad({ filter: /\\*.page.jsx/, namespace: undefined }, (args) => {
+            const data = fs.readFileSync(args.path);
+            const newSrc = `
+              import { renderPage } from "parotta-runtime";
+              ${data.toString()}
+
+              export function onRequest(context) {
+                return renderPage(Page, context.request);
+              }
+            `
+            return {
+              contents: newSrc,
+              loader: "jsx",
+            }
+          });
+        }
+      }
     ]
   });
   // console.log(await analyzeMetafile(result.metafile))
@@ -188,18 +226,6 @@ const main = async () => {
 }
 
 main();
-
-// const serverRouter = await createServerRouter();
-// const clientRouter = await createClientRouter();
-// const transpiler = new Bun.Transpiler({
-//   loader: "jsx",
-//   autoImportJSX: true,
-//   jsxOptimizationInline: true,
-
-//   // TODO
-//   // autoImportJSX: false,
-//   // jsxOptimizationInline: false,
-// });
 
 // const renderCss = async (src) => {
 //   try {

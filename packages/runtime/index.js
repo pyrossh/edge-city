@@ -16,10 +16,11 @@ import routemap from '/static/routemap.json' assert {type: 'json'};
  * CSR related functions
  */
 
-export const domain = () => typeof window !== 'undefined' ? window.origin : "http://0.0.0.0:3000";
+export const isClient = () => typeof window !== 'undefined';
+export const domain = () => isClient() ? window.origin : "http://0.0.0.0:3000";
 
 export const rpc = (serviceName) => async (params = {}) => {
-  const res = await fetch(`${domain()}/services/${serviceName}`, {
+  const res = await fetch(`${domain()}/_rpc/${serviceName}`, {
     method: "POST",
     headers: {
       "Accept": "application/json",
