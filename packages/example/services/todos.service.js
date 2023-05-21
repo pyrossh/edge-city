@@ -11,12 +11,12 @@ const todos = pgTable('todos', {
   updatedAt: date('updatedAt'),
 });
 
-export const createSchema = z.object({
+const createSchema = z.object({
   text: z.string().nonempty("please enter some text"),
   completed: z.boolean(),
 });
 
-export const updateSchema = z.object({
+const updateSchema = z.object({
   text: z.string().nonempty("please enter some text"),
   completed: z.boolean(),
 });

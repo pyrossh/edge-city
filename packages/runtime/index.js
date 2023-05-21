@@ -5,10 +5,12 @@ import { jsx as _jsx } from "react/jsx-runtime";
 import { jsxs as _jsxs } from "react/jsx-runtime";
 import { Fragment as _Fragment } from "react/jsx-runtime";
 import { renderToReadableStream } from "react-dom/server";
+import { hydrateRoot } from "react-dom/client";
 import { HelmetProvider } from 'react-helmet-async';
 import { ErrorBoundary } from "react-error-boundary";
-import { createMemoryHistory } from "history";
+import { createMemoryHistory, createBrowserHistory } from "history";
 import { createRouter } from "radix3";
+import nProgress from "nprogress";
 import importmap from '/static/importmap.json' assert {type: 'json'};
 import routemap from '/static/routemap.json' assert {type: 'json'};
 
@@ -126,7 +128,7 @@ export const RouterContext = createContext(undefined);
 const getMatch = (radixRouter, pathname) => {
   const matchedPage = radixRouter.lookup(pathname);
   if (!matchedPage) {
-    return radixRouter.lookup("_404")
+    return radixRouter.lookup("/static/js/_404.js")
   }
   return matchedPage;
 }
@@ -246,7 +248,7 @@ export const NavLink = ({ children, className, activeClassName, ...props }) => {
  */
 export const renderPage = async (PageComponent, req) => {
   const url = new URL(req.url);
-  const clientRouter = createRouter({
+  const router = createRouter({
     strictTrailingSlash: true,
     routes: Object.keys(routemap).reduce((acc, r) => {
       acc[r] = React.lazy(() => import(`/pages${r}/page.jsx`));
@@ -257,7 +259,6 @@ export const renderPage = async (PageComponent, req) => {
     initialEntries: [url.pathname + url.search],
   });
   const helmetContext = {}
-  const nProgress = { start: () => { }, done: () => { } }
   const stream = await renderToReadableStream(
     _jsxs("html", {
       lang: "en",
@@ -277,7 +278,7 @@ export const renderPage = async (PageComponent, req) => {
         children: [_jsx(App, {
           nProgress,
           history,
-          radixRouter: clientRouter,
+          router,
           rpcCache: {},
           helmetContext,
           PageComponent,
@@ -287,31 +288,9 @@ export const renderPage = async (PageComponent, req) => {
             defer: true,
             dangerouslySetInnerHTML: {
               __html: `
-              import React from "react";
-              import { hydrateRoot } from "react-dom/client";
-              import { createBrowserHistory } from "history";
-              import nProgress from "nprogress";
-              import { createRouter } from "radix3";
-              import { App } from "parotta/runtime";
-              import routemap from '/static/routemap.json' assert {type: 'json'};
-              // import sheet from './styles.css' assert { type: 'css' };
-
-              const history = createBrowserHistory();
-              const radixRouter = createRouter({
-                strictTrailingSlash: true,
-                routes: {
-                  ${Object.keys(routemap).map(r => `"${r}": React.lazy(() => import("/pages${r}/page.jsx"))`).join(',\n      ')}
-                },
-              });
-
-              hydrateRoot(document.body, React.createElement(App, {
-                nProgress,
-                history,
-                radixRouter,
-                rpcCache: {},
-                helmetContext: {},
-                PageComponent: null,
-              }));`
+              import { hydrateApp } from "parotta-runtime";
+              hydrateApp();
+              `
             }
           })
         })]
@@ -328,22 +307,21 @@ export const renderPage = async (PageComponent, req) => {
   });
 }
 
-export const renderApi = async (key, filePath, req) => {
-  const url = new URL(req.url);
-  const params = req.method === "POST" ? await req.json() : Object.fromEntries(url.searchParams);
-  const funcName = url.pathname.replace(`${key}/`, "");
-  const js = await import(path.join(process.cwd(), filePath));
-  try {
-    const result = await js[funcName](params);
-    return new Response(JSON.stringify(result), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 200,
-    });
-  } catch (err) {
-    const message = err.format ? err.format() : err;
-    return new Response(JSON.stringify(message), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 400,
-    });
-  }
+export const hydrateApp = () => {
+  const history = createBrowserHistory();
+  const router = createRouter({
+    strictTrailingSlash: true,
+    routes: Object.keys(routemap).reduce((acc, r) => {
+      acc[r] = React.lazy(() => import(`/static/js/${r}.js`));
+      return acc;
+    }, {}),
+  });
+  hydrateRoot(document.body, React.createElement(App, {
+    nProgress,
+    history,
+    router,
+    rpcCache: {},
+    helmetContext: {},
+    PageComponent: null,
+  }));
 }

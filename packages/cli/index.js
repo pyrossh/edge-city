@@ -62,14 +62,24 @@ const mapDeps = (dir) => {
 
 const staticDir = path.join(process.cwd(), "build", "static");
 
+const ensureDir = (d) => {
+  if (!fs.existsSync(d)) {
+    fs.mkdirSync(d, { recursive: true });
+  }
+}
+
 const createDirs = () => {
   const buildDir = path.join(process.cwd(), "build");
-  // if (fs.existsSync(buildDir)) {
-  //   fs.rmSync(buildDir, { recursive: true });
-  // }
-  if (!fs.existsSync(staticDir)) {
-    fs.mkdirSync(staticDir, { recursive: true });
-  }
+  ensureDir(buildDir);
+  ensureDir(staticDir);
+}
+
+const recordSize = (buildStart, dest) => {
+  const outLength = fs.statSync(dest).size;
+  const builtTime = ms(Date.now() - buildStart);
+  console.log(
+    `${pc.green("✓ Bundled")} ${dest.replace(process.cwd() + "/", "")} ${pc.cyan(`(${bytes(outLength)})`)} ${pc.gray(`[${builtTime}]`)}`
+  );
 }
 
 const buildImportMap = async () => {
@@ -111,18 +121,12 @@ const buildRouteMap = () => {
 
 let generatedCss = ``;
 const cssCache = [];
-const buildServer = async (src, type) => {
-  const buildStart = Date.now();
-  const shortName = src.replace(process.cwd(), "");
-  const outName = type === "service"
-    ? "/_rpc" + shortName.replace("/services", "").replace(".service.js", "")
-    : shortName.replace("/pages", "").replace("/page.jsx", "") || "/index";
-  const outfile = `${process.cwd()}/build/functions${outName}.js`;
+const buildServer = async (options, src, dest, plg) => {
   const result = await esbuild.build({
     bundle: true,
     target: ['es2022'],
     entryPoints: [src],
-    outfile: outfile,
+    outfile: dest,
     format: 'esm',
     keepNames: true,
     external: ["node:*"],
@@ -132,6 +136,7 @@ const buildServer = async (src, type) => {
     // metafile: true,
     jsxDev: !isProd,
     jsx: 'automatic',
+    ...options,
     define: {
       'process.env.NODE_ENV': `"${process.env.NODE_ENV}"`,
       'process.env.PG_CONN_URL': "123",
@@ -141,45 +146,10 @@ const buildServer = async (src, type) => {
         "/static/routemap.json": `${staticDir}/routemap.json`,
         "/static/importmap.json": `${staticDir}/importmap.json`
       }),
-      {
-        name: "parotta-plugin",
-        setup(build) {
-          build.onLoad({ filter: /\\*.page.jsx/, namespace: undefined }, (args) => {
-            const data = fs.readFileSync(args.path);
-            const newSrc = `
-              import { renderPage } from "parotta-runtime";
-              ${data.toString()}
-
-              export function onRequest(context) {
-                return renderPage(Page, context.request);
-              }
-            `
-            return {
-              contents: newSrc,
-              loader: "jsx",
-            }
-          });
-          build.onLoad({ filter: /\\*.css/, namespace: undefined }, (args) => {
-            if (!cssCache[args.path]) {
-              const css = fs.readFileSync(args.path);
-              generatedCss += css + "\n\n";
-              cssCache[args.path] = true;
-            }
-            return {
-              contents: "",
-              loader: "file",
-            }
-          });
-        }
-      }
+      plg,
     ]
   });
-  // console.log(await analyzeMetafile(result.metafile))
-  const outLength = fs.statSync(outfile).size;
-  const builtTime = ms(Date.now() - buildStart);
-  console.log(
-    `${pc.green("✓ Bundled")} ${outfile.replace(process.cwd() + "/", "")} ${pc.cyan(`(${bytes(outLength)})`)} ${pc.gray(`[${builtTime}]`)}`
-  );
+  return result;
 }
 
 // const bundleBun = async (r, type) => {
@@ -219,10 +189,89 @@ const main = async () => {
   buildImportMap();
   buildRouteMap();
   for (const r of routes) {
-    await buildServer(r, "page");
+    const buildStart = Date.now();
+    const dest = r.replace(process.cwd(), "").replace("/pages", "").replace("/page.jsx", "") || "/index";
+    const outfile = `build/functions${dest}.js`;
+    await buildServer({}, r, outfile, {
+      name: "parotta-page-plugin",
+      setup(build) {
+        build.onLoad({ filter: /\\*.page.jsx/, namespace: undefined }, (args) => {
+          const data = fs.readFileSync(args.path);
+          const newSrc = `
+            import { renderPage } from "parotta-runtime";
+            ${data.toString()}
+
+            export function onRequest(context) {
+              return renderPage(Page, context.request);
+            }
+          `
+          return {
+            contents: newSrc,
+            loader: "jsx",
+          }
+        });
+        build.onLoad({ filter: /\\*.css/, namespace: undefined }, (args) => {
+          if (!cssCache[args.path]) {
+            const css = fs.readFileSync(args.path);
+            generatedCss += css + "\n\n";
+            cssCache[args.path] = true;
+          }
+          return {
+            contents: "",
+            loader: "file",
+          }
+        });
+      }
+    });
+    recordSize(buildStart, outfile);
   }
   for (const s of services) {
-    await buildServer(s, "service");
+    const dest = s.replace(process.cwd(), "").replace("/services", "").replace(".service.js", "")
+    const pkg = await import(s);
+    for (const p of Object.keys(pkg)) {
+      const buildStart = Date.now();
+      const result = await buildServer({ write: false }, s, `build/functions/_rpc${dest}.js`, {
+        name: "parotta-service-plugin",
+        setup(build) {
+          build.onLoad({ filter: /\\*.service.js/, namespace: undefined }, async (args) => {
+            const src = fs.readFileSync(args.path);
+            const newSrc = `
+              ${src.toString()}
+
+              export const renderApi = async (fn, req) => {
+                const url = new URL(req.url);
+                const params = req.method === "POST" ? await req.json() : Object.fromEntries(url.searchParams);
+                try {
+                  const result = await fn(params);
+                  return new Response(JSON.stringify(result), {
+                    headers: { 'Content-Type': 'application/json' },
+                    status: 200,
+                  });
+                } catch (err) {
+                  const message = err.format ? err.format() : err;
+                  return new Response(JSON.stringify(message), {
+                    headers: { 'Content-Type': 'application/json' },
+                    status: 400,
+                  });
+                }
+              }
+
+              export function onRequest(context) {
+                return renderApi(${p}, context.request);
+              }
+            `
+            return {
+              contents: newSrc,
+              loader: "js",
+            };
+          });
+        }
+      })
+      ensureDir(`build/functions/_rpc${dest}`)
+      const outfile = `build/functions/_rpc${dest}/${p}.js`;
+      fs.writeFileSync(outfile, result.outputFiles[0].contents);
+      recordSize(buildStart, outfile);
+    }
   }
   bundleCss();
 }

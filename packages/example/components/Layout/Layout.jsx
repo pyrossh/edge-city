@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from "parotta-runtime";
 import "modern-normalize";
-import "nprogress/nprogress.css"
+import "nprogress";
 import "./Layout.css";
 
 const Layout = ({ children }) => {
