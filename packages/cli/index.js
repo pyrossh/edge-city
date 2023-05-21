@@ -9,7 +9,6 @@ import postcss from "postcss"
 import autoprefixer from "autoprefixer";
 import postcssCustomMedia from "postcss-custom-media";
 import postcssNesting from "postcss-nesting";
-import mimeTypes from "mime-types";
 import bytes from 'bytes';
 import pc from 'picocolors';
 import ms from 'ms';
@@ -206,6 +205,15 @@ const buildServer = async (src, type) => {
 //   }
 // }
 
+const bundleCss = async () => {
+  const result = await postcss([
+    autoprefixer(),
+    postcssCustomMedia(),
+    postcssNesting,
+  ]).process(generatedCss, { from: "app.css", to: "app.css" });
+  fs.writeFileSync(`${process.cwd()}/build/static/app.css`, result.toString());
+}
+
 const main = async () => {
   createDirs();
   buildImportMap();
@@ -216,31 +224,10 @@ const main = async () => {
   for (const s of services) {
     await buildServer(s, "service");
   }
-  fs.writeFileSync(`${process.cwd()}/build/static/app.css`, generatedCss);
+  bundleCss();
 }
 
 main();
-
-// const renderCss = async (src) => {
-//   try {
-//     const cssText = await Bun.file(src).text();
-//     const result = await postcss([
-//       autoprefixer(),
-//       postcssCustomMedia(),
-//       // postcssNormalize({ browsers: 'last 2 versions' }),
-//       postcssNesting,
-//     ]).process(cssText, { from: src, to: src });
-//     return new Response(result.css, {
-//       headers: { 'Content-Type': 'text/css' },
-//       status: 200,
-//     });
-//   } catch (err) {
-//     return new Response(`Not Found`, {
-//       headers: { 'Content-Type': 'text/html' },
-//       status: 404,
-//     });
-//   }
-// }
 
 // const renderJs = async (srcFile) => {
 //   try {

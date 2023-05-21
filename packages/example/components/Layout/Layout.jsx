@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from "parotta-runtime";
-import "normalize.css";
+import "modern-normalize";
 import "nprogress/nprogress.css"
 import "./Layout.css";
 
