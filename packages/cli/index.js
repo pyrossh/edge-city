@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 import meow from 'meow';
 import esbuild from 'esbuild';
 import resolve from 'esbuild-plugin-resolve';
@@ -12,10 +12,11 @@ import postcssNesting from "postcss-nesting";
 import bytes from 'bytes';
 import pc from 'picocolors';
 import ms from 'ms';
-import pkg from "./package.json";
 
+const __dirname = path.dirname(import.meta.url.replace("file://", ""));
+const version = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"))).version;
 const cli = meow(`
-parotta v${pkg.version}
+parotta v${version}
 
 Usage
   $ parotta build cloudflare
@@ -28,7 +29,6 @@ if (cli.input.length != 2) {
   cli.showHelp();
   process.exit(0);
 }
-const version = (await import(path.join(import.meta.dir, "package.json"))).default.version;
 console.log(`parotta v${version}`)
 console.log(`running with NODE_ENV=${process.env.NODE_ENV}`);
 
@@ -74,7 +74,7 @@ const bundleJs = async ({ entryPoints, outfile, ...options }, plg) => {
     ...options,
     define: {
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || "development"),
-      'process.env.PG_CONN_URL': JSON.stringify(process.env.PG_CONN_URL),
+      'process.env.PG_CONN_URL': JSON.stringify(process.env.PG_CONN_URL || ""),
     },
     plugins: [
       resolve({
