@@ -9,7 +9,6 @@ import { ErrorBoundary } from "react-error-boundary";
 import { createMemoryHistory, createBrowserHistory } from "history";
 import { createRouter } from "radix3";
 import nProgress from "nprogress";
-import importmap from '/importmap.json' assert {type: 'json'};
 import routemap from '/routemap.json' assert {type: 'json'};
 
 /**
@@ -171,7 +170,6 @@ export const App = ({ nProgress, history, router, rpcCache, helmetContext, PageC
       // }
     });
   }, []);
-  console.log("match", match)
   useEffect(() => {
     if (!isPending) {
       nProgress.done();
@@ -262,12 +260,7 @@ export const renderPage = async (PageComponent, req) => {
             rel: "stylesheet",
             href: "/css/app.css"
           }),
-          _jsx("script", {
-            type: "importmap",
-            dangerouslySetInnerHTML: {
-              __html: JSON.stringify(importmap),
-            }
-          })]
+        ]
       }), _jsx("body", {
         children: _jsxs("div", {
           id: "root",
@@ -300,8 +293,7 @@ export const renderPage = async (PageComponent, req) => {
 }
 
 export const hydrateApp = async (Page) => {
-  console.log("hydrating");
-  const { hydrateRoot } = await import("react-dom/client");
+  const module = await import("react-dom/client");
   const history = createBrowserHistory();
   const router = createRouter({
     strictTrailingSlash: true,
@@ -311,7 +303,7 @@ export const hydrateApp = async (Page) => {
     }, {}),
   });
   const root = document.getElementById("root");
-  hydrateRoot(root, React.createElement(App, {
+  module.default.hydrateRoot(root, React.createElement(App, {
     nProgress,
     history,
     router,

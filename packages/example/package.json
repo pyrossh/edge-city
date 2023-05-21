@@ -2,9 +2,9 @@
   "name": "parotta-example",
   "type": "module",
   "scripts": {
-    "dev": "wrangler pages dev static --local --live-reload",
-    "build": "parotta build cloudflare",
-    "run": "docker run -p 3000:3000 example",
+    "dev": "parotta build cloudflare",
+    "dev-server": "wrangler pages dev static --local --live-reload",
+    "build": "NODE_ENV=production parotta build cloudflare",
     "test": "bun test",
     "test-e2e": "playwright test"
   },

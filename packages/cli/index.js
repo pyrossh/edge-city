@@ -28,35 +28,9 @@ if (cli.input.length != 2) {
   cli.showHelp();
   process.exit(0);
 }
-
-
-
-if (!globalThis.firstRun) {
-  globalThis.firstRun = true
-  const version = (await import(path.join(import.meta.dir, "package.json"))).default.version;
-  console.log(`parotta v${version}`)
-  console.log(`running with cwd=${path.basename(process.cwd())} node_env=${process.env.NODE_ENV}`);
-} else {
-  console.log(`server reloading`);
-}
-const isProd = process.env.NODE_ENV === "production";
-
-const mapDeps = (dir) => {
-  return walkdir.sync(path.join(process.cwd(), dir))
-    .map((s) => s.replace(process.cwd(), ""))
-    .filter((s) => s.includes(".jsx") || s.includes(".js"))
-    .reduce((acc, s) => {
-      if (s.includes(".jsx")) {
-        acc['@' + s.replace(".jsx", "")] = s
-      }
-      if (s.includes(".js")) {
-        acc['@' + s.replace(".js", "")] = s
-      }
-      return acc;
-    }, {});
-}
-
-const staticDir = path.join(process.cwd(), "build", "static");
+const version = (await import(path.join(import.meta.dir, "package.json"))).default.version;
+console.log(`parotta v${version}`)
+console.log(`running with NODE_ENV=${process.env.NODE_ENV}`);
 
 const ensureDir = (d) => {
   if (!fs.existsSync(d)) {
@@ -64,8 +38,11 @@ const ensureDir = (d) => {
   }
 }
 
+const isProd = process.env.NODE_ENV === "production";
+const buildDir = path.join(process.cwd(), "build");
+const staticDir = path.join(buildDir, "static");
 const createDirs = () => {
-  const buildDir = path.join(process.cwd(), "build");
+  fs.rmSync(buildDir, { recursive: true });
   ensureDir(buildDir);
   ensureDir(staticDir);
 }
@@ -78,69 +55,30 @@ const recordSize = (buildStart, dest) => {
   );
 }
 
-const buildImportMap = async () => {
-  const packageJson = await import(path.join(process.cwd(), "package.json"));
-  const config = packageJson.default.parotta || { hydrate: true };
-  const devTag = !isProd ? "-dev-" : "";
-  const devQueryParam = !isProd ? `?dev` : "";
-  const nodeDeps = Object.keys(packageJson.default.dependencies).reduce((acc, dep) => {
-    acc[dep] = `https://esm.sh/${dep}@${packageJson.default.dependencies[dep]}`;
-    return acc;
-  }, {})
-  const components = mapDeps("components");
-  const importmap = {
-    "imports": {
-      "radix3": `https://esm.sh/radix3@1.0.1`,
-      "history": "https://esm.sh/history@5.3.0",
-      "react": `https://esm.sh/react@18.2.0${devQueryParam}`,
-      [`react/jsx${devTag}runtime`]: `https://esm.sh/react@18.2.0${devQueryParam}/jsx${devTag}runtime`,
-      "react-dom/client": `https://esm.sh/react-dom@18.2.0${devQueryParam}/client`,
-      "nprogress": "https://esm.sh/nprogress@0.2.0",
-      ...nodeDeps,
-      ...components,
-    }
-  }
-  const outfile = path.join(staticDir, "importmap.json");
-  fs.writeFileSync(outfile, JSON.stringify(importmap, null, 2));
-}
-
-const buildRouteMap = (routes) => {
-  const routemap = routes.reduce((acc, p) => {
-    const r = p.replace(process.cwd(), "");
-    const key = r.replace("/pages", "").replace("/page.jsx", "")
-    acc[key === "" ? "/" : key] = "/js" + (r.replace("/pages", "").replace("/page.jsx", "") || "/index") + ".js";
-    return acc
-  }, {});
-  const outfile = path.join(staticDir, "routemap.json");
-  fs.writeFileSync(outfile, JSON.stringify(routemap, null, 2));
-}
-
 let generatedCss = ``;
 const cssCache = [];
-const bundleJs = async (options, src, dest, plg) => {
+const bundleJs = async ({ entryPoints, outfile, ...options }, plg) => {
   const result = await esbuild.build({
     bundle: true,
     target: ['es2022'],
-    entryPoints: [src],
-    outfile: dest,
+    entryPoints,
+    outfile,
     format: 'esm',
-    keepNames: true,
     external: ["node:*"],
     color: true,
+    keepNames: !isProd,
+    minify: isProd,
     treeShaking: true,
-    // loader: { '.json': 'copy' },
-    // metafile: true,
     jsxDev: !isProd,
     jsx: 'automatic',
     ...options,
     define: {
-      'process.env.NODE_ENV': `"${process.env.NODE_ENV}"`,
-      'process.env.PG_CONN_URL': "123",
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || "development"),
+      'process.env.PG_CONN_URL': JSON.stringify(process.env.PG_CONN_URL),
     },
     plugins: [
       resolve({
         "/routemap.json": `${staticDir}/routemap.json`,
-        "/importmap.json": `${staticDir}/importmap.json`
       }),
       plg,
     ]
@@ -171,15 +109,30 @@ const bundleJs = async (options, src, dest, plg) => {
 //   }
 // }
 
+const buildRouteMap = (routes) => {
+  const buildStart = new Date();
+  const routemap = routes.reduce((acc, r) => {
+    const key = r.out.replace("index", "").replace(".js", "");
+    acc[key === "" ? "/" : key] = "/js" + r.out;
+    return acc
+  }, {});
+  const outfile = path.join(staticDir, "routemap.json");
+  fs.writeFileSync(outfile, JSON.stringify(routemap, null, 2));
+  recordSize(buildStart, outfile);
+}
+
 const bundlePages = async () => {
   const routes = walkdir.sync(path.join(process.cwd(), "pages"))
-    .filter((p) => p.includes("page.jsx"));
+    .filter((p) => p.includes("page.jsx"))
+    .map((r) => ({
+      in: r,
+      out: (r.replace(process.cwd(), "").replace("/pages", "").replace("/page.jsx", "") || "/index") + ".js",
+    }));
   buildRouteMap(routes);
   for (const r of routes) {
     const buildStart = Date.now();
-    const dest = r.replace(process.cwd(), "").replace("/pages", "").replace("/page.jsx", "") || "/index";
-    const outfile = `build/functions${dest}.js`;
-    await bundleJs({}, r, outfile, {
+    const outfile = `build/functions${r.out}`;
+    await bundleJs({ entryPoints: [r.in], outfile }, {
       name: "parotta-page-plugin",
       setup(build) {
         build.onLoad({ filter: /\\*.page.jsx/, namespace: undefined }, (args) => {
@@ -212,32 +165,45 @@ const bundlePages = async () => {
     });
     recordSize(buildStart, outfile);
   }
-  for (const r of routes) {
-    const buildStart = Date.now();
-    const dest = r.replace(process.cwd(), "").replace("/pages", "").replace("/page.jsx", "") || "/index";
-    const outfile = `build/static/js${dest}.js`;
-    await bundleJs({}, r, outfile, {
-      name: "parotta-page-js-plugin",
-      setup(build) {
-        build.onLoad({ filter: /\\*.page.jsx/, namespace: undefined }, (args) => {
-          const data = fs.readFileSync(args.path);
-          const newSrc = `
+  await bundleJs({
+    entryPoints: routes.map((r) => ({
+      in: r.in,
+      out: "." + r.out.replace(".js", ""),
+    })),
+    outdir: "build/static/js",
+    splitting: true,
+    entryNames: '[dir]/[name]',
+    chunkNames: 'chunks/[name]-[hash]'
+  }, {
+    name: "parotta-page-js-plugin",
+    setup(build) {
+      build.onLoad({ filter: /\\*.page.jsx/, namespace: undefined }, (args) => {
+        const data = fs.readFileSync(args.path);
+        const newSrc = `
             import { hydrateApp } from "parotta-runtime";
             ${data.toString()}
-
+  
             const searchParams = new URL(import.meta.url).searchParams;
             if (searchParams.get("hydrate") === "true") {
               hydrateApp(Page)
             }
           `
-          return {
-            contents: newSrc,
-            loader: "jsx",
-          }
-        });
-      }
-    });
-    recordSize(buildStart, outfile);
+        return {
+          contents: newSrc,
+          loader: "jsx",
+        }
+      });
+      build.onLoad({ filter: /\\*.css/, namespace: undefined }, (args) => {
+        return {
+          contents: "",
+          loader: "file",
+        }
+      });
+      build.on
+    }
+  });
+  for (const r of routes) {
+    recordSize(Date.now(), `build/static/js${r.out}`);
   }
 }
 
@@ -306,7 +272,6 @@ const bundleCss = async () => {
 
 const main = async () => {
   createDirs();
-  buildImportMap();
   await bundlePages();
   // await bundleServices();
   await bundleCss();

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from "parotta-runtime";
 import Layout from '@/components/Layout/Layout';
 import Counter from "@/components/Counter/Counter";
