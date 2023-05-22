@@ -1,4 +1,4 @@
-# Edge City
+# edge-city
 
 edge-city is a next level meta-framework for react that runs only on edge runtimes.  
 It uses file system routing with streaming SSR + CSR to render pages.  
