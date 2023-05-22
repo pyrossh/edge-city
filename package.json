@@ -3,9 +3,13 @@
   "version": "0.5.0",
   "type": "module",
   "main": "index.js",
+  "engines": {
+    "node": ">= v20"
+  },
   "dependencies": {
     "history": "^5.3.0",
-    "radix3": "^1.0.0"
+    "radix3": "^1.0.0",
+    "isbot": "3.6.10"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.14",

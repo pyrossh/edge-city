@@ -245,6 +245,7 @@ export const NavLink = ({ children, className, activeClassName, ...props }) => {
  */
 export const renderPage = async (PageComponent, req) => {
   const { renderToReadableStream } = await import("react-dom/server");
+  const { default: isbot } = await import("isbot");
   const url = new URL(req.url);
   const history = createMemoryHistory({
     initialEntries: [url.pathname + url.search],
@@ -281,11 +282,12 @@ export const renderPage = async (PageComponent, req) => {
         })
       })]
     }));
-  // TODO:
-  // if (bot || isCrawler) {
-  //  await stream.allReady
-  //  add helmetContext to head
-  // }
+
+  if (isbot(req.headers.get('User-Agent'))) {
+    await stream.allReady
+    // TODO: 
+    // add helmetContext to head
+  }
   return new Response(stream, {
     headers: { 'Content-Type': 'text/html' },
     status: 200,
