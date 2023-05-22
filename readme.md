@@ -1,3 +1,5 @@
+<img src="https://github.com/pyrossh/edge-city/assets/1687946/29f61137-d467-4730-9368-29ffb259c192" width="200px">
+
 # edge-city
 
 edge-city is a next level meta-framework for react that runs only on edge runtimes.  
