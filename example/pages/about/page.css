@@ -1,0 +1,9 @@
+.about-page {
+  margin: 0;
+  padding: 20px;
+  padding-bottom: 130px;
+
+  & footer {
+    margin-top: 100px;
+  }
+}
