@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useQuery, useMutation } from "parotta-runtime";
+import { useQuery, useMutation } from "edge-city";
 import { useForm } from 'react-hook-form';
 import Todo from "@/components/Todo/Todo";
 import { TextField, Label, Input } from 'react-aria-components';

@@ -1,10 +1,10 @@
 {
-  "name": "parotta-example",
+  "name": "edge-city-example",
   "type": "module",
   "scripts": {
-    "dev": "parotta build cloudflare",
+    "dev": "edge-city build cloudflare",
     "dev-server": "wrangler pages dev static --local --live-reload",
-    "build": "NODE_ENV=production parotta build cloudflare",
+    "build": "NODE_ENV=production edge-city build cloudflare",
     "test": "bun test",
     "test-e2e": "playwright test"
   },
@@ -14,7 +14,7 @@
     "modern-normalize": "^2.0.0",
     "normalize.css": "^8.0.1",
     "nprogress": "0.2.0",
-    "parotta-runtime": "workspace:*",
+    "edge-city": "workspace:*",
     "react": "18.2.0",
     "react-aria-components": "1.0.0-alpha.3",
     "react-dom": "18.2.0",
@@ -27,11 +27,7 @@
   "devDependencies": {
     "@playwright/test": "^1.31.2",
     "eslint": "^8.35.0",
-    "eslint-config-react-app": "^7.0.1",
-    "parotta-cli": "workspace:*"
-  },
-  "parotta": {
-    "hydrate": true
+    "eslint-config-react-app": "^7.0.1"
   },
   "prettier": {
     "printWidth": 120

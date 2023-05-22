@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useRouter } from "parotta-runtime";
+import { useRouter } from "edge-city";
 import Layout from '@/components/Layout/Layout';
 import Counter from "@/components/Counter/Counter";
 import { Helmet } from 'react-helmet-async';
@@ -13,7 +13,7 @@ const Page = () => {
   return (
     <Layout>
       <Helmet>
-        <title>Parotta App</title>
+        <title>Edge City</title>
       </Helmet>
       <div className="home-page">
         <h1>Home Page</h1>

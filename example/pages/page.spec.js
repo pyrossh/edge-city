@@ -6,7 +6,7 @@
 // })
 
 // test('has title', async ({ page }) => {
-//   await expect(page).toHaveTitle(/Parotta/);
+//   await expect(page).toHaveTitle(/Edge City/);
 // });
 
 // test('has links', async ({ page }) => {

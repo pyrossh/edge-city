@@ -14,13 +14,14 @@ import pc from 'picocolors';
 import ms from 'ms';
 
 const __dirname = path.dirname(import.meta.url.replace("file://", ""));
+const appName = "edge-city";
 const version = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"))).version;
 const cli = meow(`
-parotta v${version}
+${appName} v${version}
 
 Usage
-  $ parotta build cloudflare
-  $ parotta build vercel
+  $ ${appName} build cloudflare
+  $ ${appName} build vercel
 `, {
   importMeta: import.meta,
   autoVersion: true,
@@ -29,7 +30,7 @@ if (cli.input.length != 2) {
   cli.showHelp();
   process.exit(0);
 }
-console.log(`parotta v${version}`)
+console.log(`${appName} v${version}`)
 console.log(`running with NODE_ENV=${process.env.NODE_ENV}`);
 
 const ensureDir = (d) => {
@@ -38,11 +39,17 @@ const ensureDir = (d) => {
   }
 }
 
+const cleanDir = (d) => {
+  if (fs.existsSync(d)) {
+    fs.rmSync(d, { recursive: true });
+  }
+}
+
 const isProd = process.env.NODE_ENV === "production";
 const buildDir = path.join(process.cwd(), "build");
 const staticDir = path.join(buildDir, "static");
 const createDirs = () => {
-  fs.rmSync(buildDir, { recursive: true });
+  cleanDir(buildDir);
   ensureDir(buildDir);
   ensureDir(staticDir);
 }
@@ -133,12 +140,12 @@ const bundlePages = async () => {
     const buildStart = Date.now();
     const outfile = `build/functions${r.out}`;
     await bundleJs({ entryPoints: [r.in], outfile }, {
-      name: "parotta-page-plugin",
+      name: "page-plugin",
       setup(build) {
         build.onLoad({ filter: /\\*.page.jsx/, namespace: undefined }, (args) => {
           const data = fs.readFileSync(args.path);
           const newSrc = `
-            import { renderPage } from "parotta-runtime";
+            import { renderPage } from "edge-city";
             ${data.toString()}
 
             export function onRequest(context) {
@@ -175,12 +182,12 @@ const bundlePages = async () => {
     entryNames: '[dir]/[name]',
     chunkNames: 'chunks/[name]-[hash]'
   }, {
-    name: "parotta-page-js-plugin",
+    name: "page-js-plugin",
     setup(build) {
       build.onLoad({ filter: /\\*.page.jsx/, namespace: undefined }, (args) => {
         const data = fs.readFileSync(args.path);
         const newSrc = `
-            import { hydrateApp } from "parotta-runtime";
+            import { hydrateApp } from "edge-city";
             ${data.toString()}
   
             const searchParams = new URL(import.meta.url).searchParams;
@@ -216,7 +223,7 @@ const bundleServices = async () => {
     for (const p of Object.keys(pkg)) {
       const buildStart = Date.now();
       const result = await bundleJs({ write: false }, s, `build/functions/_rpc${dest}.js`, {
-        name: "parotta-service-plugin",
+        name: "service-plugin",
         setup(build) {
           build.onLoad({ filter: /\\*.service.js/, namespace: undefined }, async (args) => {
             const src = fs.readFileSync(args.path);
@@ -301,7 +308,7 @@ main();
 //       }
 //     })
 //     if (addRpcImport) {
-//       lines.unshift(`import { rpc } from "parotta/runtime";`);
+//       lines.unshift(`import { rpc } from "edge-city";`);
 //     }
 //     // remove .css and .service imports
 //     const filteredJsx = lines.filter((ln) => !ln.includes(`.css"`) && !ln.includes(`.service"`)).join("\n");

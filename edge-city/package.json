@@ -1,15 +1,19 @@
 {
-  "name": "parotta-cli",
+  "name": "edge-city",
   "version": "0.5.0",
   "type": "module",
+  "main": "index.js",
   "dependencies": {
+    "history": "^5.3.0",
+    "radix3": "^1.0.0"
+  },
+  "devDependencies": {
     "autoprefixer": "^10.4.14",
     "bytes": "3.1.2",
     "esbuild": "0.17.19",
     "meow": "12.0.1",
     "mime-types": "2.1.35",
     "ms": "2.1.3",
-    "parotta-runtime": "workspace:*",
     "picocolors": "1.0.0",
     "postcss": "^8.4.21",
     "postcss-custom-media": "^9.1.2",
@@ -19,9 +23,12 @@
   },
   "peerDependencies": {
     "react": "*",
-    "react-dom": "*"
+    "react-dom": "*",
+    "nprogress": "*",
+    "react-error-boundary": "*",
+    "react-helmet-async": "*"
   },
   "bin": {
-    "parotta": "index.js"
+    "edge-city": "cli.js"
   }
 }

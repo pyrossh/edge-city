@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from "parotta-runtime";
+import { Link } from "edge-city";
 import "modern-normalize";
 import "nprogress";
 import "./Layout.css";

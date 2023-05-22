@@ -58,8 +58,7 @@ export default defineConfig({
   ],
   outputDir: 'test-results/',
   webServer: {
-    command: '../parotta/cli.js',
-    port: 3000,
+    command: 'npm run dev',
+    port: 8788,
   },
 });
-
