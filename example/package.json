@@ -2,10 +2,9 @@
   "name": "edge-city-example",
   "type": "module",
   "scripts": {
-    "dev": "edge-city build cloudflare",
-    "dev-server": "wrangler pages dev static --local --live-reload",
-    "build": "NODE_ENV=production edge-city build cloudflare",
-    "test": "bun test",
+    "dev": "edge-city dev -p cloudflare",
+    "build:prod": " edge-city build -p cloudflare",
+    "test": "jest",
     "test-e2e": "playwright test"
   },
   "dependencies": {

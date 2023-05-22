@@ -1,4 +1,3 @@
-import { test, expect } from "bun:test";
 import { createSchema } from "./todos.service";
 
 test("validate createSchema", () => {

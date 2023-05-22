@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import meow from 'meow';
+import yargs from 'yargs'
+import { hideBin } from 'yargs/helpers'
 import esbuild from 'esbuild';
 import resolve from 'esbuild-plugin-resolve';
 import fs from "fs";
@@ -13,46 +14,9 @@ import bytes from 'bytes';
 import pc from 'picocolors';
 import ms from 'ms';
 
-const __dirname = path.dirname(import.meta.url.replace("file://", ""));
-const appName = "edge-city";
-const version = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"))).version;
-const cli = meow(`
-${appName} v${version}
-
-Usage
-  $ ${appName} build cloudflare
-  $ ${appName} build vercel
-`, {
-  importMeta: import.meta,
-  autoVersion: true,
-});
-if (cli.input.length != 2) {
-  cli.showHelp();
-  process.exit(0);
-}
-console.log(`${appName} v${version}`)
-console.log(`running with NODE_ENV=${process.env.NODE_ENV}`);
-
-const ensureDir = (d) => {
-  if (!fs.existsSync(d)) {
-    fs.mkdirSync(d, { recursive: true });
-  }
-}
-
-const cleanDir = (d) => {
-  if (fs.existsSync(d)) {
-    fs.rmSync(d, { recursive: true });
-  }
-}
-
 const isProd = process.env.NODE_ENV === "production";
 const buildDir = path.join(process.cwd(), "build");
 const staticDir = path.join(buildDir, "static");
-const createDirs = () => {
-  cleanDir(buildDir);
-  ensureDir(buildDir);
-  ensureDir(staticDir);
-}
 
 const recordSize = (buildStart, dest) => {
   const outLength = fs.statSync(dest).size;
@@ -92,29 +56,6 @@ const bundleJs = async ({ entryPoints, outfile, ...options }, plg) => {
   });
   return result;
 }
-
-// const bundleBun = async (r, type) => {
-//   const buildStart = Date.now();
-//   const shortName =  r.replace(process.cwd(), "").replace("/page.jsx", "");
-//   const result = await Bun.build({
-//     entrypoints: [r],
-//     outdir: `${process.cwd()}/bb/functions/${shortName}`,
-//   });
-//   if (!result.success) {
-//     console.error("Build failed");
-//     for (const message of result.logs) {
-//       // Bun will pretty print the message object
-//       console.error(message);
-//     }
-//   }
-//   for (const o of result.outputs) {
-//     const outLength = (await o.arrayBuffer()).byteLength;
-//     const builtTime = ms(Date.now() - buildStart);
-//     console.log(
-//       `✓ Bundled ${o.kind} ${o.path.replace(process.cwd() + "/bb", "")} ${pc.cyan(`(${bytes(outLength)})`)} ${pc.gray(`[${builtTime}]`)}`
-//     );
-//   }
-// }
 
 const buildRouteMap = (routes) => {
   const buildStart = new Date();
@@ -277,14 +218,55 @@ const bundleCss = async () => {
   fs.writeFileSync(`${process.cwd()}/build/static/css/app.css`, result.toString());
 }
 
-const main = async () => {
+const ensureDir = (d) => {
+  if (!fs.existsSync(d)) {
+    fs.mkdirSync(d, { recursive: true });
+  }
+}
+
+const cleanDir = (d) => {
+  if (fs.existsSync(d)) {
+    fs.rmSync(d, { recursive: true });
+  }
+}
+const createDirs = () => {
+  cleanDir(buildDir);
+  ensureDir(buildDir);
+  ensureDir(staticDir);
+}
+
+const build = async () => {
   createDirs();
   await bundlePages();
   // await bundleServices();
   await bundleCss();
 }
 
-main();
+yargs(hideBin(process.argv))
+  .scriptName("edge-city")
+  .usage('$0 <cmd> [args]')
+  .command('build', 'build the project', (y) => {
+    y.option('platform', {
+      alias: 'p',
+      description: 'The edge platform',
+      choices: ['cloudflare', 'vercel'],
+    })
+      .demandOption("p")
+  }, ({ platform }) => {
+    build(platform);
+  })
+  .command('dev', 'run the dev server', (y) => {
+    y.option('platform', {
+      alias: 'p',
+      type: 'string',
+      description: 'cloudflare or vercel',
+      choices: ['cloudflare', 'vercel']
+    })
+  }, ({ platform }) => {
+    build(platform);
+  })
+  .demandCommand(1)
+  .parse()
 
 // const renderJs = async (srcFile) => {
 //   try {
