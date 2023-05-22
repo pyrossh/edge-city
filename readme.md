@@ -20,6 +20,15 @@ During production each page is packaged to an esm function adapted to the platfo
 2. `wrangler` for deploying to cloudflare page functions
 3. `vercel` for deploying to vercel edge runtime
 
+## DB access
+Since it runs only on edge runtimes which have access to only fetch and websocket web API's, you have to use database drivers
+which are compatible with these API's. Here is a list of some of them,
+
+* [NeonDB serverless driver](https://github.com/neondatabase/serverless) - postgres
+* [Platnetscale serverless driver](https://planetscale.com/docs/tutorials/planetscale-serverless-driver) - mysql
+* [Mongo Http](https://github.com/patrick-kw-chiu/mongo-http.js) - mongodb
+
+
 ### Supported platforms
 1. [Cloudflare page functions](https://developers.cloudflare.com/pages/platform/functions/routing/)
 2. [TODO][Vercel edge functions](https://vercel.com/docs/concepts/functions/edge-functions)
@@ -38,3 +47,5 @@ During production each page is packaged to an esm function adapted to the platfo
 5. Add tests for bot
 6. Add tests for runtime
 7. Maybe move to vite for HMR goodness
+8. Add E2E tests for example
+9. Fix todos sql library
