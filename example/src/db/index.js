@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import { Pool } from '@neondatabase/serverless';
 import { highlight } from 'sql-highlight';
 
-export const pool = new Pool({ connectionString: process.env.PG_CONN_URL });
+export const pool = new Pool({ connectionString: process.env.EC_PG_CONN_URL });
 const db = drizzle(pool, {
   logger: {
     logQuery: (query, params) => {

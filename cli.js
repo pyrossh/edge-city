@@ -14,9 +14,14 @@ import postcssNesting from "postcss-nesting";
 import bytes from 'bytes';
 import pc from 'picocolors';
 import ms from 'ms';
+import watch from 'node-watch';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 let isProd = false;
-const inputStaticDir = path.join(process.cwd(), "static");
+const srcDir = path.join(process.cwd(), "src");
+const inputStaticDir = path.join(srcDir, "static");
 const buildDir = path.join(process.cwd(), "build");
 const staticDir = path.join(buildDir, "static");
 
@@ -30,7 +35,20 @@ const recordSize = (buildStart, dest) => {
 
 let generatedCss = ``;
 const cssCache = [];
-const bundleJs = async ({ entryPoints, outfile, ...options }, plg) => {
+const serverEnvs = Object.keys(process.env)
+  .filter((k) => k.startsWith("EC_") || k === "NODE_ENV")
+  .reduce((acc, k) => {
+    acc[`process.env.${k}`] = JSON.stringify(process.env[k]);
+    return acc
+  }, {});
+const clientEnvs = Object.keys(process.env)
+  .filter((k) => k.startsWith("EC_PUBLIC") || k === "NODE_ENV")
+  .reduce((acc, k) => {
+    acc[`process.env.${k}`] = JSON.stringify(process.env[k]);
+    return acc
+  }, {});
+
+const bundleJs = async ({ entryPoints, isServer, outfile, ...options }, plg) => {
   const result = await esbuild.build({
     bundle: true,
     target: ['es2022'],
@@ -45,10 +63,7 @@ const bundleJs = async ({ entryPoints, outfile, ...options }, plg) => {
     jsxDev: !isProd,
     jsx: 'automatic',
     ...options,
-    define: {
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || "development"),
-      'process.env.PG_CONN_URL': JSON.stringify(process.env.PG_CONN_URL || ""),
-    },
+    define: isServer ? serverEnvs : clientEnvs,
     plugins: [
       resolve({
         "/routemap.json": `${staticDir}/routemap.json`,
@@ -72,17 +87,17 @@ const buildRouteMap = (routes) => {
 }
 
 const bundlePages = async () => {
-  const routes = walkdir.sync(path.join(process.cwd(), "pages"))
+  const routes = walkdir.sync(path.join(srcDir, "pages"))
     .filter((p) => p.includes("page.jsx"))
     .map((r) => ({
       in: r,
-      out: (r.replace(process.cwd(), "").replace("/pages", "").replace("/page.jsx", "") || "/index") + ".js",
+      out: (r.replace(srcDir, "").replace("/pages", "").replace("/page.jsx", "") || "/index") + ".js",
     }));
   buildRouteMap(routes);
   for (const r of routes) {
     const buildStart = Date.now();
     const outfile = `build/functions${r.out}`;
-    await bundleJs({ entryPoints: [r.in], outfile }, {
+    await bundleJs({ isServer: true, entryPoints: [r.in], outfile }, {
       name: "page-plugin",
       setup(build) {
         build.onLoad({ filter: /\\*.page.jsx/, namespace: undefined }, (args) => {
@@ -117,6 +132,7 @@ const bundlePages = async () => {
     recordSize(buildStart, outfile);
   }
   await bundleJs({
+    isServer: false,
     entryPoints: routes.map((r) => ({
       in: r.in,
       out: "." + r.out.replace(".js", ""),
@@ -159,33 +175,42 @@ const bundlePages = async () => {
 }
 
 const bundleServices = async () => {
-  const services = walkdir.sync(path.join(process.cwd(), "services"))
+  const services = walkdir.sync(path.join(srcDir, "services"))
     .filter((s) => s.includes(".service.js"));
   for (const s of services) {
-    const dest = s.replace(process.cwd(), "").replace("/services", "").replace(".service.js", "");
-    const pkg = await import(s);
-    for (const p of Object.keys(pkg)) {
+    const dest = s.replace(srcDir, "").replace("/services", "").replace(".service.js", "");
+    const src = fs.readFileSync(s, 'utf8');
+    const funcs = src.split("\n").filter((l) => l.includes("export const") && l.includes("=>"))
+      .map((l) => /export const (.*) = async/g.exec(l))
+      .filter((n) => n && n[1])
+      .map((n) => n[1]);
+    for (const p of funcs) {
       const buildStart = Date.now();
-      const result = await bundleJs({ write: false }, s, `build/functions/_rpc${dest}.js`, {
-        name: "service-plugin",
-        setup(build) {
-          build.onLoad({ filter: /\\*.service.js/, namespace: undefined }, async (args) => {
-            const src = fs.readFileSync(args.path);
-            const newSrc = `
-              import renderApi from "edge-city/renderApi";
-              ${src.toString()}
+      const result = await bundleJs({
+        isServer: true,
+        write: false,
+        entryPoints: [s],
+        // outfile: `build/functions/_rpc${dest}.js`,
+      },
+        {
+          name: "service-plugin",
+          setup(build) {
+            build.onLoad({ filter: /\\*.service.js/, namespace: undefined }, async (args) => {
+              const newSrc = `
+            import renderApi from "edge-city/renderApi";
+            ${src.toString()}
 
-              export function onRequest(context) {
-                return renderApi(${p}, context.request);
-              }
-            `
-            return {
-              contents: newSrc,
-              loader: "js",
-            };
-          });
-        }
-      })
+            export function onRequest(context) {
+              return renderApi(${p}, context.request);
+            }
+          `
+              return {
+                contents: newSrc,
+                loader: "js",
+              };
+            });
+          }
+        })
       fse.ensureDirSync(`build/functions/_rpc${dest}`)
       const outfile = `build/functions/_rpc${dest}/${p}.js`;
       fs.writeFileSync(outfile, result.outputFiles[0].contents);
@@ -214,8 +239,16 @@ const build = async (platform, setProd) => {
     isProd = true;
   }
   await bundlePages();
-  // await bundleServices();
+  await bundleServices();
   await bundleCss();
+  if (!setProd) {
+    // watch src files, imports and dotenv
+    watch(srcDir, { recursive: true }, async (evt, name) => {
+      await bundlePages();
+      await bundleServices();
+      await bundleCss();
+    });
+  }
   if (platform === "cloudflare") {
     // create _routes.json for cloudflare which only includes the pages and services
   }

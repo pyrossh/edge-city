@@ -8,8 +8,10 @@ export const renderApi = async (fn, req) => {
       status: 200,
     });
   } catch (err) {
-    const message = err.format ? err.format() : err;
-    return new Response(JSON.stringify(message), {
+    console.log("err: renderApi", err);
+    const message = err.format ? err.format() : err.message;
+    const data = process.env.NODE_ENV === "development" ? { message, stack: err.stack } : { message };
+    return new Response(JSON.stringify(data), {
       headers: { 'Content-Type': 'application/json' },
       status: 400,
     });
