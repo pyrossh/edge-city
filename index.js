@@ -11,7 +11,7 @@ import routemap from '/routemap.json' assert {type: 'json'};
 export const isClient = () => typeof window !== 'undefined';
 export const domain = () => isClient() ? window.origin : "http://0.0.0.0:3000";
 
-export const rpc = (serviceName) => async (params = {}) => {
+export const defineRpc = (serviceName) => async (params = {}) => {
   const res = await fetch(`${domain()}/_rpc/${serviceName}`, {
     method: "POST",
     headers: {
@@ -114,33 +114,33 @@ export const useMutation = (fn) => {
 }
 
 export const RouterContext = createContext(undefined);
-
-export const App = ({ history, router, rpcContext, helmetContext }) => {
+export const RouterProvider = ({ router, history, rpcContext, helmetContext }) => {
   const [_, startTransition] = useTransition();
   const [pathname, setPathname] = useState(history.location.pathname);
-  const match = router.lookup(pathname) || router.lookup("/_404");
+  const page = router.lookup(pathname) || router.lookup("/_404");
   useEffect(() => {
     return history.listen(({ location }) => {
-      startTransition(() => { // this causes 2 renders to happen but stops jitter or layout reflow due to React.lazy
+      // this causes 2 renders to happen but stops jitter or flash due to React.lazy
+      startTransition(() => {
         setPathname(location.pathname);
       })
     });
   }, []);
-  return _jsx(HelmetProvider, {
-    context: helmetContext,
-    children: _jsx(RpcContext.Provider, {
-      value: rpcContext,
-      children: _jsx(RouterContext.Provider, {
-        value: {
-          history: history,
-          params: match.params || {},
-        },
+  return _jsx(RouterContext.Provider, {
+    value: {
+      history,
+      params: page.params || {},
+    },
+    children: _jsx(HelmetProvider, {
+      context: helmetContext,
+      children: _jsx(RpcContext.Provider, {
+        value: rpcContext,
         children: _jsx(ErrorBoundary, {
           onError: (err) => console.log(err),
           fallback: _jsx("p", {}, "Oops something went wrong"),
           children: _jsx(Suspense, {
             fallback: _jsx("p", {}, "Loading..."),
-            children: _jsx(match, {}),
+            children: _jsx(page, {}),
           }),
         }),
       }),
@@ -202,7 +202,7 @@ export const hydrateApp = async () => {
     }, {}),
   });
   const root = document.getElementById("root");
-  module.default.hydrateRoot(root, React.createElement(App, {
+  module.default.hydrateRoot(root, _jsx(RouterProvider, {
     history,
     router,
     rpcContext: {},

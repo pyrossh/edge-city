@@ -39,13 +39,15 @@ which are compatible with these API's. Here is a list of some of them,
 1. `node >= v20.2.0`
 2. `pnpm >= v8.5.1`
 
-### Todo
+### Todo[General]
 1. Hydrate rpc cache
 2. Build a docs website
-3. Fix 404/500 pages not routing
-4. Add Env variables `PUBLIC_` for client
-5. Add tests for bot
-6. Add tests for runtime
-7. Maybe move to vite for HMR goodness
-8. Add E2E tests for example
-9. Fix todos sql library
+4. Add tests for bot
+5. Add tests for runtime
+6. Add Env variables `PUBLIC_` for client
+7. Add E2E tests for example
+8. Maybe move to vite for HMR goodness
+
+### Todo[Cloudflare]
+1. Fix 404/500 pages not routing on server
+2. Fix todos service not loading
