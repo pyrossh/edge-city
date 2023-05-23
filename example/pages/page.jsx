@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from "edge-city";
 import Layout from '@/components/Layout/Layout';
 import Counter from "@/components/Counter/Counter";

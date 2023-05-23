@@ -1,9 +1,7 @@
 import React, {
   Suspense, createContext, useContext, useState, useEffect, useTransition, useCallback
 } from "react";
-import { jsx as _jsx } from "react/jsx-runtime";
-import { jsxs as _jsxs } from "react/jsx-runtime";
-import { Fragment as _Fragment } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { HelmetProvider } from 'react-helmet-async';
 import { ErrorBoundary } from "react-error-boundary";
 import { createMemoryHistory, createBrowserHistory } from "history";
@@ -121,7 +119,7 @@ export const useMutation = (fn) => {
 
 export const RouterContext = createContext(undefined);
 
-export const App = ({ history, router, rpcCache, helmetContext }) => {
+export const App = ({ history, router, rpcContext, helmetContext }) => {
   const [_, startTransition] = useTransition();
   const [pathname, setPathname] = useState(history.location.pathname);
   const match = router.lookup(pathname) || router.lookup("/_404");
@@ -135,7 +133,7 @@ export const App = ({ history, router, rpcCache, helmetContext }) => {
   return _jsx(HelmetProvider, {
     context: helmetContext,
     children: _jsx(RpcContext.Provider, {
-      value: rpcCache,
+      value: rpcContext,
       children: _jsx(RouterContext.Provider, {
         value: {
           history: history,
@@ -197,9 +195,26 @@ export const NavLink = ({ children, className, activeClassName, ...props }) => {
   })
 }
 
-/**
- * SSR related functions
- */
+export const hydrateApp = async () => {
+  const module = await import("react-dom/client");
+  const history = createBrowserHistory();
+  const router = createRouter({
+    strictTrailingSlash: true,
+    routes: Object.keys(routemap).reduce((acc, r) => {
+      acc[r] = React.lazy(() => import(routemap[r]));
+      return acc;
+    }, {}),
+  });
+  const root = document.getElementById("root");
+  module.default.hydrateRoot(root, React.createElement(App, {
+    history,
+    router,
+    rpcContext: {},
+    helmetContext: {},
+  }));
+}
+
+// TODO: move this to cli.js or another file
 export const renderPage = async (Page, req) => {
   const { renderToReadableStream } = await import("react-dom/server");
   const { default: isbot } = await import("isbot");
@@ -215,8 +230,9 @@ export const renderPage = async (Page, req) => {
     }, {}),
   });
   const jsScript = url.pathname === "/" ? "/index" : url.pathname;
-  const helmetContext = {}
-  if (isbot(req.headers.get('User-Agent'))) {
+  const helmetContext = {};
+  const rpcContext = {};
+  if (isbot(req.headers.get('User-Agent')) || url.search.includes("ec_is_bot=true")) {
     const stream = await renderToReadableStream(_jsx("body", {
       children: _jsxs("div", {
         id: "root",
@@ -235,27 +251,33 @@ export const renderPage = async (Page, req) => {
       })
     }))
     await stream.allReady;
-    // const data = [];
-    // const reader = stream.getReader();
-    // await reader.read().then(function pump({ done, value }) {
-    //   if (done) {
-    //     return;
-    //   }
-    //   data.push(value);
-    //   return reader.read().then(pump);
-    // });
-    // return new Response(`
-    //   <!DOCTYPE html>
-    //   <html lang="en">
-    //     <head>
-    //       ${helmetContext.helmet.title.toString()}
-    //     </head>
-    //     ${res}
-    //   </html>
-    // `, {
-    //   headers: { 'Content-Type': 'text/html' },
-    //   status: 200,
-    // });
+    let isFirstChunk = true;
+    // TODO: add rpcContext
+    const transformStream = new TransformStream({
+      transform(chunk, controller) {
+        if (isFirstChunk) {
+          isFirstChunk = false;
+          controller.enqueue(new TextEncoder().encode(`
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            ${helmetContext.helmet.title.toString()}
+            ${helmetContext.helmet.meta.toString()}
+            <link rel="stylesheet" href="/css/app.css">
+          </head>
+        `));
+        }
+        controller.enqueue(chunk);
+      },
+      flush(controller) {
+        controller.enqueue(new TextEncoder().encode(`</html>`));
+        controller.terminate();
+      },
+    });
+    return new Response(stream.pipeThrough(transformStream), {
+      headers: { 'Content-Type': 'text/html' },
+      status: 200,
+    });
   }
   const stream = await renderToReadableStream(
     _jsxs("html", {
@@ -273,7 +295,7 @@ export const renderPage = async (Page, req) => {
           children: [_jsx(App, {
             history,
             router,
-            rpcCache: {},
+            rpcContext,
             helmetContext,
           }), _jsx(_Fragment, {
             children: _jsx("script", {
@@ -289,23 +311,4 @@ export const renderPage = async (Page, req) => {
     headers: { 'Content-Type': 'text/html' },
     status: 200,
   });
-}
-
-export const hydrateApp = async () => {
-  const module = await import("react-dom/client");
-  const history = createBrowserHistory();
-  const router = createRouter({
-    strictTrailingSlash: true,
-    routes: Object.keys(routemap).reduce((acc, r) => {
-      acc[r] = React.lazy(() => import(routemap[r]));
-      return acc;
-    }, {}),
-  });
-  const root = document.getElementById("root");
-  module.default.hydrateRoot(root, React.createElement(App, {
-    history,
-    router,
-    rpcCache: {},
-    helmetContext: {},
-  }));
 }
