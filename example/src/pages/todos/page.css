@@ -1,14 +1,7 @@
-body {
-  padding: 10px;
-  background-color: turquoise;
-}
-
-
 :root {
   --spectrum-alias-border-color: black;
   --spectrum-global-color-gray-50: white;
 }
-
 
 .react-aria-TextField {
   --field-border: var(--spectrum-alias-border-color);

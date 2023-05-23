@@ -16,7 +16,7 @@ const Page = () => {
         <title>Edge City</title>
       </Helmet>
       <div className="home-page">
-        <h1>Home Page 123 444</h1>
+        <h1>Home Page</h1>
         <p>
           Path: {router.pathname}
         </p>
