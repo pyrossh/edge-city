@@ -4,6 +4,7 @@ import { hideBin } from 'yargs/helpers'
 import esbuild from 'esbuild';
 import resolve from 'esbuild-plugin-resolve';
 import fs from "fs";
+import fse from "fs-extra";
 import path from 'path';
 import walkdir from 'walkdir';
 import postcss from "postcss"
@@ -14,7 +15,8 @@ import bytes from 'bytes';
 import pc from 'picocolors';
 import ms from 'ms';
 
-const isProd = process.env.NODE_ENV === "production";
+let isProd = false;
+const inputStaticDir = path.join(process.cwd(), "static");
 const buildDir = path.join(process.cwd(), "build");
 const staticDir = path.join(buildDir, "static");
 
@@ -50,6 +52,8 @@ const bundleJs = async ({ entryPoints, outfile, ...options }, plg) => {
     plugins: [
       resolve({
         "/routemap.json": `${staticDir}/routemap.json`,
+        "@/_404/page": `${process.cwd()}/pages/_404/page.jsx`,
+        "@/_500/page": `${process.cwd()}/pages/_500/page.jsx`,
       }),
       plg,
     ]
@@ -87,6 +91,9 @@ const bundlePages = async () => {
           const data = fs.readFileSync(args.path);
           const newSrc = `
             import { renderPage } from "edge-city";
+            import NotFoundPage from "@/_404/page";
+            import ErrorPage from "@/_500/page";
+
             ${data.toString()}
 
             export function onRequest(context) {
@@ -159,7 +166,7 @@ const bundleServices = async () => {
   const services = walkdir.sync(path.join(process.cwd(), "services"))
     .filter((s) => s.includes(".service.js"));
   for (const s of services) {
-    const dest = s.replace(process.cwd(), "").replace("/services", "").replace(".service.js", "")
+    const dest = s.replace(process.cwd(), "").replace("/services", "").replace(".service.js", "");
     const pkg = await import(s);
     for (const p of Object.keys(pkg)) {
       const buildStart = Date.now();
@@ -200,7 +207,7 @@ const bundleServices = async () => {
           });
         }
       })
-      ensureDir(`build/functions/_rpc${dest}`)
+      fse.ensureDirSync(`build/functions/_rpc${dest}`)
       const outfile = `build/functions/_rpc${dest}/${p}.js`;
       fs.writeFileSync(outfile, result.outputFiles[0].contents);
       recordSize(buildStart, outfile);
@@ -214,32 +221,25 @@ const bundleCss = async () => {
     postcssCustomMedia(),
     postcssNesting,
   ]).process(generatedCss, { from: "app.css", to: "app.css" });
-  ensureDir(`build/static/css`)
+  fse.ensureDirSync(`build/static/css`)
   fs.writeFileSync(`${process.cwd()}/build/static/css/app.css`, result.toString());
 }
 
-const ensureDir = (d) => {
-  if (!fs.existsSync(d)) {
-    fs.mkdirSync(d, { recursive: true });
+const build = async (platform, setProd) => {
+  fse.removeSync(buildDir);
+  fse.ensureDirSync(buildDir);
+  fse.ensureDirSync(staticDir);
+  fse.copySync(inputStaticDir, staticDir);
+  if (setProd) {
+    process.env.NODE_ENV = "production";
+    isProd = true;
   }
-}
-
-const cleanDir = (d) => {
-  if (fs.existsSync(d)) {
-    fs.rmSync(d, { recursive: true });
-  }
-}
-const createDirs = () => {
-  cleanDir(buildDir);
-  ensureDir(buildDir);
-  ensureDir(staticDir);
-}
-
-const build = async () => {
-  createDirs();
   await bundlePages();
-  // await bundleServices();
+  await bundleServices();
   await bundleCss();
+  if (platform === "cloudflare") {
+    // create _routes.json for cloudflare which only includes the pages and services
+  }
 }
 
 yargs(hideBin(process.argv))
@@ -253,7 +253,7 @@ yargs(hideBin(process.argv))
     })
       .demandOption("p")
   }, ({ platform }) => {
-    build(platform);
+    build(platform, true);
   })
   .command('dev', 'run the dev server', (y) => {
     y.option('platform', {
@@ -263,7 +263,7 @@ yargs(hideBin(process.argv))
       choices: ['cloudflare', 'vercel']
     })
   }, ({ platform }) => {
-    build(platform);
+    build(platform, false);
   })
   .demandCommand(1)
   .parse()

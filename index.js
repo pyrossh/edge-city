@@ -125,7 +125,7 @@ export const RouterContext = createContext(undefined);
 const getMatch = (router, pathname) => {
   const matchedPage = router.lookup(pathname);
   if (!matchedPage) {
-    return router.lookup("/js/_404.js")
+    return router.lookup("/_404")
   }
   return matchedPage;
 }
@@ -250,6 +250,14 @@ export const renderPage = async (PageComponent, req) => {
   const history = createMemoryHistory({
     initialEntries: [url.pathname + url.search],
   });
+  const router = createRouter({
+    strictTrailingSlash: true,
+    routes: Object.keys(routemap).reduce((acc, r) => {
+      acc[r] = r;
+      return acc;
+    }, {}),
+  });
+  const AppPage = router.lookup(url.pathname) ? PageComponent : NotFoundPage;
   const jsScript = url.pathname === "/" ? "index" : url.pathname;
   const helmetContext = {}
   const stream = await renderToReadableStream(
@@ -271,7 +279,7 @@ export const renderPage = async (PageComponent, req) => {
             router: null,
             rpcCache: {},
             helmetContext,
-            PageComponent,
+            PageComponent: AppPage,
           }), _jsx(_Fragment, {
             children: _jsx("script", {
               type: "module",
