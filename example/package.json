@@ -12,7 +12,6 @@
     "drizzle-orm": "0.26.0",
     "modern-normalize": "^2.0.0",
     "normalize.css": "^8.0.1",
-    "nprogress": "0.2.0",
     "edge-city": "workspace:*",
     "react": "18.2.0",
     "react-aria-components": "1.0.0-alpha.3",

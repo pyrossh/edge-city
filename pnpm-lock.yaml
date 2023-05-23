@@ -10,9 +10,6 @@ importers:
       isbot:
         specifier: 3.6.10
         version: 3.6.10
-      nprogress:
-        specifier: '*'
-        version: 0.2.0
       radix3:
         specifier: ^1.0.0
         version: 1.0.0
@@ -95,9 +92,6 @@ importers:
       normalize.css:
         specifier: ^8.0.1
         version: 8.0.1
-      nprogress:
-        specifier: 0.2.0
-        version: 0.2.0
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -6101,10 +6095,6 @@ packages:
     dependencies:
       path-key: 3.1.1
     dev: true
-
-  /nprogress@0.2.0:
-    resolution: {integrity: sha512-I19aIingLgR1fmhftnbWWO3dXc0hSxqHQHQb3H8m+K3TnEn/iSeTZZOyvKXWqQESMwuUVnatlCnZdLBZZt2VSA==}
-    dev: false
 
   /object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}

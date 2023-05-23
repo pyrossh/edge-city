@@ -52,8 +52,6 @@ const bundleJs = async ({ entryPoints, outfile, ...options }, plg) => {
     plugins: [
       resolve({
         "/routemap.json": `${staticDir}/routemap.json`,
-        "@/_404/page": `${process.cwd()}/pages/_404/page.jsx`,
-        "@/_500/page": `${process.cwd()}/pages/_500/page.jsx`,
       }),
       plg,
     ]
@@ -91,8 +89,6 @@ const bundlePages = async () => {
           const data = fs.readFileSync(args.path);
           const newSrc = `
             import { renderPage } from "edge-city";
-            import NotFoundPage from "@/_404/page";
-            import ErrorPage from "@/_500/page";
 
             ${data.toString()}
 
@@ -140,7 +136,7 @@ const bundlePages = async () => {
   
             const searchParams = new URL(import.meta.url).searchParams;
             if (searchParams.get("hydrate") === "true") {
-              hydrateApp(Page)
+              hydrateApp()
             }
           `
         return {
@@ -235,7 +231,7 @@ const build = async (platform, setProd) => {
     isProd = true;
   }
   await bundlePages();
-  await bundleServices();
+  // await bundleServices();
   await bundleCss();
   if (platform === "cloudflare") {
     // create _routes.json for cloudflare which only includes the pages and services

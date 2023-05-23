@@ -8,7 +8,6 @@ import { HelmetProvider } from 'react-helmet-async';
 import { ErrorBoundary } from "react-error-boundary";
 import { createMemoryHistory, createBrowserHistory } from "history";
 import { createRouter } from "radix3";
-import nProgress from "nprogress";
 import routemap from '/routemap.json' assert {type: 'json'};
 
 /**
@@ -122,59 +121,17 @@ export const useMutation = (fn) => {
 
 export const RouterContext = createContext(undefined);
 
-const getMatch = (router, pathname) => {
-  const matchedPage = router.lookup(pathname);
-  if (!matchedPage) {
-    return router.lookup("/_404")
-  }
-  return matchedPage;
-}
-
-const getCssUrl = (pathname) => `/pages${pathname === "/" ? "" : pathname}/page.css`;
-
-export const App = ({ nProgress, history, router, rpcCache, helmetContext, PageComponent }) => {
-  const [isPending, startTransition] = useTransition();
-  const [match, setMatch] = useState(() => {
-    if (PageComponent) {
-      return PageComponent;
-    }
-    return getMatch(router, history.location.pathname)
-  });
+export const App = ({ history, router, rpcCache, helmetContext }) => {
+  const [_, startTransition] = useTransition();
+  const [pathname, setPathname] = useState(history.location.pathname);
+  const match = router.lookup(pathname) || router.lookup("/_404");
   useEffect(() => {
     return history.listen(({ location }) => {
-      // const href = getCssUrl(location.pathname);
-      // const isLoaded = Array.from(document.getElementsByTagName("link"))
-      //   .map((link) => link.href.replace(window.origin, "")).includes(href);
-      // if (!isLoaded) {
-      // const link = document.createElement('link');
-      // link.setAttribute("rel", "stylesheet");
-      // link.setAttribute("type", "text/css");
-      // link.onload = () => {
-      //   nProgress.start();
-      //   startTransition(() => {
-      //     setMatch(getMatch(router, location.pathname));
-      //   })
-      // };
-      // link.setAttribute("href", href);
-      // document.getElementsByTagName("head")[0].appendChild(link);
-      // } else {
-      // const link = document.createElement('link');
-      // link.setAttribute("rel", "stylesheet");
-      // link.setAttribute("type", "text/css");
-      // link.setAttribute("href", href);
-      // document.getElementsByTagName("head")[0].appendChild(link);
-      nProgress.start();
-      startTransition(() => {
-        setMatch(getMatch(router, location.pathname));
+      startTransition(() => { // this causes 2 renders to happen but stops jitter or layout reflow due to React.lazy
+        setPathname(location.pathname);
       })
-      // }
     });
   }, []);
-  useEffect(() => {
-    if (!isPending) {
-      nProgress.done();
-    }
-  }, [isPending]);
   return _jsx(HelmetProvider, {
     context: helmetContext,
     children: _jsx(RpcContext.Provider, {
@@ -243,7 +200,7 @@ export const NavLink = ({ children, className, activeClassName, ...props }) => {
 /**
  * SSR related functions
  */
-export const renderPage = async (PageComponent, req) => {
+export const renderPage = async (Page, req) => {
   const { renderToReadableStream } = await import("react-dom/server");
   const { default: isbot } = await import("isbot");
   const url = new URL(req.url);
@@ -253,13 +210,53 @@ export const renderPage = async (PageComponent, req) => {
   const router = createRouter({
     strictTrailingSlash: true,
     routes: Object.keys(routemap).reduce((acc, r) => {
-      acc[r] = r;
+      acc[r] = React.lazy(() => Promise.resolve({ default: Page }));
       return acc;
     }, {}),
   });
-  const AppPage = router.lookup(url.pathname) ? PageComponent : NotFoundPage;
-  const jsScript = url.pathname === "/" ? "index" : url.pathname;
+  const jsScript = url.pathname === "/" ? "/index" : url.pathname;
   const helmetContext = {}
+  if (isbot(req.headers.get('User-Agent'))) {
+    const stream = await renderToReadableStream(_jsx("body", {
+      children: _jsxs("div", {
+        id: "root",
+        children: [_jsx(App, {
+          history,
+          router,
+          rpcCache: {},
+          helmetContext,
+        }), _jsx(_Fragment, {
+          children: _jsx("script", {
+            type: "module",
+            defer: true,
+            src: `/js${jsScript}.js?hydrate=true`,
+          })
+        })]
+      })
+    }))
+    await stream.allReady;
+    // const data = [];
+    // const reader = stream.getReader();
+    // await reader.read().then(function pump({ done, value }) {
+    //   if (done) {
+    //     return;
+    //   }
+    //   data.push(value);
+    //   return reader.read().then(pump);
+    // });
+    // return new Response(`
+    //   <!DOCTYPE html>
+    //   <html lang="en">
+    //     <head>
+    //       ${helmetContext.helmet.title.toString()}
+    //     </head>
+    //     ${res}
+    //   </html>
+    // `, {
+    //   headers: { 'Content-Type': 'text/html' },
+    //   status: 200,
+    // });
+  }
   const stream = await renderToReadableStream(
     _jsxs("html", {
       lang: "en",
@@ -274,35 +271,27 @@ export const renderPage = async (PageComponent, req) => {
         children: _jsxs("div", {
           id: "root",
           children: [_jsx(App, {
-            nProgress,
             history,
-            router: null,
+            router,
             rpcCache: {},
             helmetContext,
-            PageComponent: AppPage,
           }), _jsx(_Fragment, {
             children: _jsx("script", {
               type: "module",
               defer: true,
-              src: `/js/${jsScript}.js?hydrate=true`,
+              src: `/js${jsScript}.js?hydrate=true`,
             })
           })]
         })
       })]
     }));
-
-  if (isbot(req.headers.get('User-Agent'))) {
-    await stream.allReady
-    // TODO: 
-    // add helmetContext to head
-  }
   return new Response(stream, {
     headers: { 'Content-Type': 'text/html' },
     status: 200,
   });
 }
 
-export const hydrateApp = async (Page) => {
+export const hydrateApp = async () => {
   const module = await import("react-dom/client");
   const history = createBrowserHistory();
   const router = createRouter({
@@ -314,11 +303,9 @@ export const hydrateApp = async (Page) => {
   });
   const root = document.getElementById("root");
   module.default.hydrateRoot(root, React.createElement(App, {
-    nProgress,
     history,
     router,
     rpcCache: {},
     helmetContext: {},
-    PageComponent: Page,
   }));
 }

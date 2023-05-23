@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from "edge-city";
 import "modern-normalize";
-import "nprogress";
 import "./Layout.css";
 
 const Layout = ({ children }) => {
