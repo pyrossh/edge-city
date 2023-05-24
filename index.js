@@ -205,7 +205,7 @@ export const hydrateApp = async () => {
   module.default.hydrateRoot(root, _jsx(RouterProvider, {
     history,
     router,
-    rpcContext: {},
+    rpcContext: window.__EC_RPC_DATA__ || {},
     helmetContext: {},
   }));
 }
