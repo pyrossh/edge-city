@@ -48,6 +48,13 @@ const clientEnvs = Object.keys(process.env)
     return acc
   }, {});
 
+const parseExports = (src) => {
+  return src.split("\n").filter((l) => l.includes("export const") && l.includes("=>"))
+    .map((l) => /export const (.*) = async/g.exec(l))
+    .filter((n) => n && n[1])
+    .map((n) => n[1]);
+}
+
 const bundleJs = async ({ entryPoints, isServer, outfile, ...options }, plg) => {
   const result = await esbuild.build({
     bundle: true,
@@ -166,7 +173,19 @@ const bundlePages = async () => {
           loader: "file",
         }
       });
-      build.on
+      build.onLoad({ filter: /\\*.service.js/, namespace: undefined }, async (args) => {
+        const src = fs.readFileSync(args.path, "utf8");
+        const svcName = args.path.replace(srcDir, "").replace("/services/", "").replace(".service.js", "");
+        const funcs = parseExports(src);
+        const newSrc = `
+          import { defineRpc } from "edge-city";
+          ${funcs.map((f) => `export const ${f} = defineRpc("${svcName}/${f}")`).join("\n")}
+        `
+        return {
+          contents: newSrc,
+          loader: "js",
+        };
+      });
     }
   });
   for (const r of routes) {
@@ -180,10 +199,7 @@ const bundleServices = async () => {
   for (const s of services) {
     const dest = s.replace(srcDir, "").replace("/services", "").replace(".service.js", "");
     const src = fs.readFileSync(s, 'utf8');
-    const funcs = src.split("\n").filter((l) => l.includes("export const") && l.includes("=>"))
-      .map((l) => /export const (.*) = async/g.exec(l))
-      .filter((n) => n && n[1])
-      .map((n) => n[1]);
+    const funcs = parseExports(src);
     for (const p of funcs) {
       const buildStart = Date.now();
       const result = await bundleJs({
@@ -278,45 +294,4 @@ yargs(hideBin(process.argv))
     build(platform, false);
   })
   .demandCommand(1)
-  .parse()
-
-// const renderJs = async (srcFile) => {
-//   try {
-//     const jsText = await Bun.file(srcFile).text();
-//     const result = await transpiler.transform(jsText);
-//     // inject code which calls the api for that function
-//     const lines = result.split("\n");
-//     // lines.unshift(`import React from "react";`);
-
-//     // replace all .service imports which rpc interface
-//     let addRpcImport = false;
-//     lines.forEach((ln) => {
-//       if (ln.includes(".service")) {
-//         addRpcImport = true;
-//         const [importName, serviceName] = ln.match(/\@\/services\/(.*)\.service/);
-//         const funcsText = ln.replace(`from "${importName}"`, "").replace("import", "").replace("{", "").replace("}", "").replace(";", "");
-//         const funcsName = funcsText.split(",");
-//         funcsName.forEach((fnName) => {
-//           lines.push(`const ${fnName} = rpc("${serviceName}/${fnName.trim()}")`);
-//         })
-//       }
-//     })
-//     if (addRpcImport) {
-//       lines.unshift(`import { rpc } from "edge-city";`);
-//     }
-//     // remove .css and .service imports
-//     const filteredJsx = lines.filter((ln) => !ln.includes(`.css"`) && !ln.includes(`.service"`)).join("\n");
-//     //.replaceAll("$jsx", "React.createElement");
-//     return new Response(filteredJsx, {
-//       headers: {
-//         'Content-Type': 'application/javascript',
-//       },
-//       status: 200,
-//     });
-//   } catch (err) {
-//     return new Response(`Not Found`, {
-//       headers: { 'Content-Type': 'text/html' },
-//       status: 404,
-//     });
-//   }
-// }
+  .parse();
