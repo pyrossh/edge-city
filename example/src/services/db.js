@@ -13,8 +13,3 @@ const db = drizzle(pool, {
 });
 
 export default db;
-
-// import { migrate } from 'drizzle-orm/neon-serverless/migrator';
-// export const migrateAll = async () => {
-//   await migrate(db, { migrationsFolder: './db/migrations' });
-// }

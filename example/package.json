@@ -4,6 +4,8 @@
   "scripts": {
     "dev": "edge-city dev -p cloudflare",
     "build": " edge-city build -p cloudflare",
+    "generate": "drizzle-kit generate:pg --out migrations --schema migrations/schema.js",
+    "migrate": "node scripts/migrate.js",
     "test": "jest",
     "test-e2e": "playwright test"
   },
@@ -23,6 +25,8 @@
     "zod": "^3.21.4"
   },
   "devDependencies": {
+    "drizzle-kit": "0.18.0",
+    "postgres": "3.3.4",
     "@playwright/test": "^1.31.2",
     "eslint": "^8.35.0",
     "eslint-config-react-app": "^7.0.1"
