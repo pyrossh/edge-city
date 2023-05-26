@@ -8,6 +8,7 @@ import { createBrowserHistory } from "history";
 import { createRouter } from "radix3";
 import routemap from '/routemap.json' assert {type: 'json'};
 
+export const isProd = () => process.env.NODE_ENV === "production";
 export const isClient = () => typeof window !== 'undefined';
 export const domain = () => isClient() ? window.origin : "http://0.0.0.0:3000";
 
@@ -114,7 +115,7 @@ export const useMutation = (fn) => {
 }
 
 export const RouterContext = createContext(undefined);
-export const RouterProvider = ({ router, history, rpcContext, helmetContext }) => {
+export const RouterProvider = ({ router, history, rpcContext, helmetContext, App }) => {
   const [_, startTransition] = useTransition();
   const [pathname, setPathname] = useState(history.location.pathname);
   const page = router.lookup(pathname) || router.lookup("/_404");
@@ -140,12 +141,14 @@ export const RouterProvider = ({ router, history, rpcContext, helmetContext }) =
           fallback: _jsx("p", {}, "Oops something went wrong"),
           children: _jsx(Suspense, {
             fallback: _jsx("p", {}, "Loading..."),
-            children: _jsx(page, {}),
+            children: _jsx(App, {
+              children: _jsx(page, {}),
+            })
           }),
         }),
       }),
     }),
-  });
+  })
 }
 
 export const useRouter = () => {
@@ -191,7 +194,10 @@ export const NavLink = ({ children, className, activeClassName, ...props }) => {
   })
 }
 
-export const hydrateApp = async () => {
+export const hydrateApp = async (App) => {
+  if (!isProd()) {
+    console.log("hydrating with", window._EDGE_DATA_);
+  }
   const module = await import("react-dom/client");
   const history = createBrowserHistory();
   const router = createRouter({
@@ -205,7 +211,8 @@ export const hydrateApp = async () => {
   module.default.hydrateRoot(root, _jsx(RouterProvider, {
     history,
     router,
-    rpcContext: window.__EC_RPC_DATA__ || {},
+    rpcContext: window._EDGE_DATA_ || {},
     helmetContext: {},
+    App,
   }));
 }

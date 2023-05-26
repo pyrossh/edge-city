@@ -45,7 +45,6 @@ which are compatible with these API's. Here is a list of some of them,
 3. Add tests for runtime
 4. Add E2E tests for example
 5. Maybe move to vite for HMR goodness
-6. Fix todos service not loading
 
 ### Todo[Cloudflare]
 1. Fix 404/500 pages not routing on server

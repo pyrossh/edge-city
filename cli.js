@@ -21,6 +21,7 @@ dotenv.config();
 
 let isProd = false;
 const srcDir = path.join(process.cwd(), "src");
+const pagesDir = path.join(srcDir, "pages");
 const inputStaticDir = path.join(srcDir, "static");
 const buildDir = path.join(process.cwd(), "build");
 const staticDir = path.join(buildDir, "static");
@@ -36,13 +37,13 @@ const recordSize = (buildStart, dest) => {
 let generatedCss = ``;
 const cssCache = [];
 const serverEnvs = Object.keys(process.env)
-  .filter((k) => k.startsWith("EC_") || k === "NODE_ENV")
+  .filter((k) => k.startsWith("EDGE_") || k === "NODE_ENV")
   .reduce((acc, k) => {
     acc[`process.env.${k}`] = JSON.stringify(process.env[k]);
     return acc
   }, {});
 const clientEnvs = Object.keys(process.env)
-  .filter((k) => k.startsWith("EC_PUBLIC") || k === "NODE_ENV")
+  .filter((k) => k.startsWith("EDGE_PUBLIC") || k === "NODE_ENV")
   .reduce((acc, k) => {
     acc[`process.env.${k}`] = JSON.stringify(process.env[k]);
     return acc
@@ -94,7 +95,9 @@ const buildRouteMap = (routes) => {
 }
 
 const bundlePages = async () => {
-  const routes = walkdir.sync(path.join(srcDir, "pages"))
+  const appExists = fs.existsSync(path.join(pagesDir, "app.jsx"));
+  const importAppComp = appExists ? `import App from "@/pages/app";` : ""
+  const routes = walkdir.sync(pagesDir)
     .filter((p) => p.includes("page.jsx"))
     .map((r) => ({
       in: r,
@@ -111,11 +114,12 @@ const bundlePages = async () => {
           const data = fs.readFileSync(args.path);
           const newSrc = `
             import renderPage from "edge-city/renderPage";
+            ${importAppComp}
 
             ${data.toString()}
 
             export function onRequest(context) {
-              return renderPage(Page, context.request);
+              return renderPage(Page, App, context.request);
             }
           `
           return {
@@ -155,11 +159,13 @@ const bundlePages = async () => {
         const data = fs.readFileSync(args.path);
         const newSrc = `
             import { hydrateApp } from "edge-city";
+            ${importAppComp}
+
             ${data.toString()}
   
             const searchParams = new URL(import.meta.url).searchParams;
             if (searchParams.get("hydrate") === "true") {
-              hydrateApp()
+              hydrateApp(App)
             }
           `
         return {

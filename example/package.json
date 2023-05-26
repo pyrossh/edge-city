@@ -3,6 +3,8 @@
   "type": "module",
   "scripts": {
     "dev": "edge-city dev -p cloudflare",
+    "dev:wrangler": "cd build && wrangler pages dev static",
+    "deploy:wrangler": "cd build && wrangler pages deploy static",
     "build": " edge-city build -p cloudflare",
     "generate": "drizzle-kit generate:pg --out migrations --schema migrations/schema.js",
     "migrate": "node scripts/migrate.js",
@@ -29,6 +31,7 @@
     "postgres": "3.3.4",
     "@playwright/test": "^1.31.2",
     "eslint": "^8.35.0",
+    "wrangler": "3.0.1",
     "eslint-config-react-app": "^7.0.1"
   },
   "prettier": {

@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useQuery, useMutation } from "edge-city";
 import { useForm } from 'react-hook-form';
@@ -29,7 +29,6 @@ export default Page;
 
 const TodoList = () => {
   const { data, refetch } = useQuery("todos", () => getTodos());
-  console.log("data", data);
   const { mutate, isMutating, err } = useMutation(async ({ text }) => {
     await createTodo({
       text,
@@ -38,12 +37,11 @@ const TodoList = () => {
     await refetch();
   });
   const { register, handleSubmit, formState: { errors } } = useForm();
-  console.log('err', err, errors);
-  useEffect(() => {
-    setTimeout(() => {
-      refetch();
-    }, 3000)
-  }, [])
+  // useEffect(() => {
+  //   setTimeout(() => {
+  //     refetch();
+  //   }, 3000)
+  // }, [])
   return (
     <div>
       <ul>

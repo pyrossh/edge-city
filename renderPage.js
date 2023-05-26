@@ -101,7 +101,7 @@ const render = async (children, {
   }
 }
 
-const renderPage = async (Page, req) => {
+const renderPage = async (Page, App, req) => {
   const url = new URL(req.url);
   const history = createMemoryHistory({
     initialEntries: [url.pathname + url.search],
@@ -137,6 +137,7 @@ const renderPage = async (Page, req) => {
                 router,
                 rpcContext,
                 helmetContext,
+                App,
               }),
             ]
           })
@@ -147,9 +148,11 @@ const renderPage = async (Page, req) => {
       Object.keys(helmetContext.helmet)
         .map((k) => helmetContext.helmet[k].toString())
         .join(''),
-    injectBeforeBodyClose: () => ''
-      + `<script>window.__EC_RPC_DATA__ = ${JSON.stringify(rpcContext)};</script>`
-      + `<script type="module" src="/js${jsScript}.js?hydrate=true"></script>`
+    injectOnEnd: () => {
+      return ''
+        + `<script>window._EDGE_DATA_ = ${JSON.stringify(rpcContext)};</script>`
+        + `<script type="module" src="/js${jsScript}.js?hydrate=true" defer></script>`
+    }
   });
   return new Response(stream, {
     headers: { 'Content-Type': 'text/html' },
