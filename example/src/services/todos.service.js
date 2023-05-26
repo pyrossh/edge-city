@@ -1,5 +1,4 @@
 import { eq, asc } from 'drizzle-orm';
-import db from "./db";
 import { boolean, date, pgTable, serial, text } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 

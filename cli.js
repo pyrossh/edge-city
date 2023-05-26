@@ -114,11 +114,13 @@ const bundlePages = async () => {
           const data = fs.readFileSync(args.path);
           const newSrc = `
             import renderPage from "edge-city/renderPage";
+            import init from "@/init";
             ${importAppComp}
 
             ${data.toString()}
 
-            export function onRequest(context) {
+            export async function onRequest(context) {
+              await init();
               return renderPage(Page, App, context.request);
             }
           `
@@ -219,13 +221,15 @@ const bundleServices = async () => {
           setup(build) {
             build.onLoad({ filter: /\\*.service.js/, namespace: undefined }, async (args) => {
               const newSrc = `
-            import renderApi from "edge-city/renderApi";
-            ${src.toString()}
+                import renderApi from "edge-city/renderApi";
+                import init from "@/init";
+                ${src.toString()}
 
-            export function onRequest(context) {
-              return renderApi(${p}, context.request);
-            }
-          `
+                export async function onRequest(c) {
+                  await init();
+                  return renderApi(${p}, c.request);
+                }
+              `
               return {
                 contents: newSrc,
                 loader: "js",
