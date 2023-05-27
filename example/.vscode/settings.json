@@ -9,5 +9,10 @@
     "**/dist": true,
     "**/playwright-report": true,
     "test-results": true
-  }
+  },
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
 }

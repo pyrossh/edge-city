@@ -1,5 +1,5 @@
-import React from 'react';
-import { Helmet } from 'react-helmet-async';
+import React from "react";
+import { Helmet } from "react-helmet-async";
 import "./page.css";
 
 export default function Page() {
@@ -13,5 +13,5 @@ export default function Page() {
         <h2>Internal Server Error</h2>
       </div>
     </div>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 export default function Timer() {
   const [counter, setCounter] = useState(0);
@@ -8,7 +8,7 @@ export default function Timer() {
     }, 100);
     return () => {
       clearInterval(ref);
-    }
+    };
   }, []);
   return (
     <div>

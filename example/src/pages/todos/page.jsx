@@ -1,8 +1,8 @@
-import React from 'react';
-import { Helmet } from 'react-helmet-async';
+import React from "react";
+import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation } from "edge-city";
-import { useForm } from 'react-hook-form';
-import { Button, TextField, Input } from 'react-aria-components';
+import { useForm } from "react-hook-form";
+import { Button, TextField, Input } from "react-aria-components";
 import Todo from "@/components/Todo/Todo";
 import { getTodos, createTodo, updateTodo, deleteTodo } from "@/services/todos.service";
 import "./page.css";
@@ -13,7 +13,7 @@ export default function Page() {
     await createTodo({
       text,
       completed: false,
-    })
+    });
     await refetch();
   });
   const updateMutation = useMutation(async ({ text, completed }) => {
@@ -23,8 +23,12 @@ export default function Page() {
   const deleteMutation = useMutation(async (id) => {
     await deleteTodo(id);
     await refetch();
-  })
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  });
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
   return (
     <div className="todos-page">
       <h1 className="title">Todo List</h1>
@@ -35,10 +39,12 @@ export default function Page() {
         <p className="subtitle">Share this page to collaborate with others.</p>
         <form onSubmit={handleSubmit(mutate)}>
           <TextField isRequired isReadOnly={isMutating}>
-            <Input {...register('text')} placeholder="Add a todo item" />
+            <Input {...register("text")} placeholder="Add a todo item" />
             {err?.text && <p>{err.text._errors[0]}</p>}
           </TextField>
-          <Button className="add-button" type="submit" isDisabled={isMutating}>Add</Button>
+          <Button className="add-button" type="submit" isDisabled={isMutating}>
+            Add
+          </Button>
         </form>
         <ul>
           {data.map((item) => (
@@ -52,5 +58,5 @@ export default function Page() {
         </ul>
       </div>
     </div>
-  )
+  );
 }

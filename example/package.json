@@ -2,6 +2,8 @@
   "name": "edge-city-example",
   "type": "module",
   "scripts": {
+    "lint": "eslint ./src",
+    "fmt": "prettier ./src --write",
     "dev": "edge-city dev -p cloudflare",
     "dev:wrangler": "cd build && wrangler pages dev static",
     "deploy:wrangler": "cd build && wrangler pages deploy static",
@@ -30,13 +32,17 @@
     "eslint": "^8.35.0",
     "eslint-config-react-app": "^7.0.1",
     "postgres": "3.3.4",
+    "prettier": "^2.8.8",
     "wrangler": "3.0.1"
   },
   "prettier": {
-    "printWidth": 120
+    "printWidth": 100,
+    "singleQuote": false,
+    "jsxSingleQuote": false,
+    "bracketSameLine": false,
+    "trailingComma": "all"
   },
   "eslintConfig": {
-    "root": true,
     "parserOptions": {
       "ecmaVersion": "latest",
       "sourceType": "module"
@@ -45,13 +51,14 @@
       "eslint:recommended",
       "react-app"
     ],
-    "ignorePatterns": [
-      "build"
-    ],
     "rules": {
       "react/prop-types": "warn",
       "react/react-in-jsx-scope": "off",
       "no-unused-vars": "warn"
+    },
+    "globals": {
+      "globalThis": false,
+      "db": false
     }
   }
 }

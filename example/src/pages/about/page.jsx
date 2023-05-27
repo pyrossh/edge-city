@@ -1,6 +1,6 @@
-import React from 'react';
+import React from "react";
 import { Link, useRouter } from "edge-city";
-import { Helmet } from 'react-helmet-async';
+import { Helmet } from "react-helmet-async";
 import "./page.css";
 
 export default function Page() {
@@ -13,14 +13,12 @@ export default function Page() {
       </Helmet>
       <div>
         <h1>About Page</h1>
-        <p>
-          Path: {router.pathname}
-        </p>
+        <p>Path: {router.pathname}</p>
         <p>Showcase of using edge-city meta-framework.</p>
       </div>
       <footer>
         <Link href="/">Back</Link>
       </footer>
     </div>
-  )
+  );
 }

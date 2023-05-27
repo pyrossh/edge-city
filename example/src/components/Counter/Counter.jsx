@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button } from 'react-aria-components';
+import { Button } from "react-aria-components";
 import "./Counter.css";
 
 const Counter = () => {
@@ -11,14 +11,12 @@ const Counter = () => {
       <Button className="button" onClick={increment}>
         -
       </Button>
-      <span className="count">
-        {count}
-      </span>
+      <span className="count">{count}</span>
       <Button className="button" onClick={decrement}>
         +
       </Button>
     </div>
-  )
-}
+  );
+};
 
 export default Counter;

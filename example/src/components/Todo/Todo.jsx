@@ -19,10 +19,13 @@ const Todo = ({ item, updateMutation, deleteMutation }) => {
     setBusy(true);
     save(item, null, item.completed);
   }, [item]);
-  const doSaveCompleted = useCallback((completed) => {
-    setBusy(true);
-    save(item, item.text, completed);
-  }, [item]);
+  const doSaveCompleted = useCallback(
+    (completed) => {
+      setBusy(true);
+      save(item, item.text, completed);
+    },
+    [item],
+  );
   return (
     <li className="todo">
       {!editing && (
@@ -32,16 +35,17 @@ const Todo = ({ item, updateMutation, deleteMutation }) => {
             <p>{item.text}</p>
             <p className="timestamp">{item.createdAt}</p>
           </div>
-          <button className="edit-button" title="Edit">✏️</button>
-          <button class="delete-button" title="Delete">🗑️</button>
+          <button className="edit-button" title="Edit">
+            ✏️
+          </button>
+          <button class="delete-button" title="Delete">
+            🗑️
+          </button>
         </>
       )}
       {editing && (
         <>
-          <input
-            class="border rounded w-full py-2 px-3 mr-4"
-            defaultValue={item.text}
-          />
+          <input class="border rounded w-full py-2 px-3 mr-4" defaultValue={item.text} />
           <button
             class="p-2 rounded mr-2 disabled:opacity-50"
             title="Save"
