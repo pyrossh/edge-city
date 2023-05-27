@@ -35,7 +35,6 @@ const recordSize = (buildStart, dest) => {
 }
 
 let generatedCss = ``;
-const cssCache = [];
 const serverEnvs = Object.keys(process.env)
   .filter((k) => k.startsWith("EDGE_") || k === "NODE_ENV")
   .reduce((acc, k) => {
@@ -130,11 +129,8 @@ const bundlePages = async () => {
           }
         });
         build.onLoad({ filter: /\\*.css/, namespace: undefined }, (args) => {
-          if (!cssCache[args.path]) {
-            const css = fs.readFileSync(args.path);
-            generatedCss += css + "\n\n";
-            cssCache[args.path] = true;
-          }
+          const css = fs.readFileSync(args.path);
+          generatedCss += css + "\n\n";
           return {
             contents: "",
             loader: "file",
@@ -269,7 +265,9 @@ const build = async (platform, setProd) => {
   await bundleCss();
   if (!setProd) {
     // watch src files, imports and dotenv
+    console.log("watching for changes");
     watch(srcDir, { recursive: true }, async (evt, name) => {
+      generatedCss = "";
       await bundlePages();
       await bundleServices();
       await bundleCss();

@@ -1,16 +1,32 @@
 .todo {
-  & label {
-    list-style-type: none;
-    padding: 1em;
-    border-radius: 0.5em;
-    background-color: #ddd;
-    margin-top: 1em;
+  display: flex;
+  border-bottom-width: 1px;
+  border-color: #d1d5db;
+  align-items: center;
+  height: 4rem;
+  margin-bottom: 0.5rem;
+  margin-top: 0.5rem;
+
+  & .text {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex: 1;
+    flex-direction: column;
+    font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+    margin-left: 0.5rem;
   }
-  
-  & .done {
-    text-decoration: line-through;
+
+  & .timestamp {
+    line-height: 2;
+    opacity: 0.5;
+    font-size: 0.75rem;
+  }
+
+  & .edit-button {
+    padding: 0.5rem;
+    margin-right: 0.5rem;
+  }
+
+  & .delete-button {
+    padding: 0.5rem;
   }
 }

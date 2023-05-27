@@ -1,3 +1,46 @@
+.todos-page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  max-width: 36rem;
+
+  & .title {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 700;
+  }
+
+  & .container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  & .subtitle {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    opacity: 0.5;
+    margin-top: 1rem;
+  }
+
+  & form {
+    display: flex;
+    margin-top: 1rem;
+  }
+
+  & ul {
+    display: flex;
+    flex-direction: column;
+  }
+
+  & .add-button {
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    background-color: #2563eb;
+    color: white;
+    margin-left: 0.5rem;
+  }
+}
+
 :root {
   --spectrum-alias-border-color: black;
   --spectrum-global-color-gray-50: white;
@@ -11,10 +54,10 @@
   --text-color-disabled: var(--spectrum-alias-text-color-disabled);
   --focus-ring-color: slateblue;
   --invalid-color: var(--spectrum-global-color-red-600);
-
   display: flex;
   flex-direction: column;
   width: fit-content;
+  flex: 1;
 
   .react-aria-Input {
     padding: 0.286rem;
@@ -24,6 +67,14 @@
     background: var(--field-background);
     font-size: 1.143rem;
     color: var(--text-color);
+    border-radius: 0.25rem;
+    margin-right: 1rem;
+    border-width: 1px;
+    width: 100%;
+    padding-left: 0.75rem;  
+    padding-right: 0.75rem;
+    padding-bottom: 0.5rem;
+    padding-top: 0.5rem;
 
     &[aria-invalid] {
       border-color: var(--invalid-color);

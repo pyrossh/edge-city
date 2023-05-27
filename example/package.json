@@ -14,8 +14,6 @@
   "dependencies": {
     "@neondatabase/serverless": "0.4.5",
     "drizzle-orm": "0.26.0",
-    "modern-normalize": "^2.0.0",
-    "normalize.css": "^8.0.1",
     "edge-city": "workspace:*",
     "react": "18.2.0",
     "react-aria-components": "1.0.0-alpha.3",
@@ -27,12 +25,12 @@
     "zod": "^3.21.4"
   },
   "devDependencies": {
-    "drizzle-kit": "0.18.0",
-    "postgres": "3.3.4",
     "@playwright/test": "^1.31.2",
+    "drizzle-kit": "0.18.0",
     "eslint": "^8.35.0",
-    "wrangler": "3.0.1",
-    "eslint-config-react-app": "^7.0.1"
+    "eslint-config-react-app": "^7.0.1",
+    "postgres": "3.3.4",
+    "wrangler": "3.0.1"
   },
   "prettier": {
     "printWidth": 120

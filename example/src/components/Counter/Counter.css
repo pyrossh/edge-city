@@ -1,0 +1,9 @@
+.counter {
+  & .button {
+    border-radius: 0.25rem;
+    padding: 1rem;
+    background-color: #2563eb;
+    color: white;
+    margin-left: 0.5rem;
+  }
+}

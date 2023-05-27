@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useRouter } from "edge-city";
 import Counter from "@/components/Counter/Counter";
 import { Helmet } from 'react-helmet-async';

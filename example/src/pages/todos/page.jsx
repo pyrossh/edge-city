@@ -2,10 +2,9 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useQuery, useMutation } from "edge-city";
 import { useForm } from 'react-hook-form';
+import { Button, TextField, Input } from 'react-aria-components';
 import Todo from "@/components/Todo/Todo";
-import { TextField, Label, Input } from 'react-aria-components';
-import { Button } from 'react-aria-components';
-import { getTodos, createTodo } from "@/services/todos.service";
+import { getTodos, createTodo, updateTodo, deleteTodo } from "@/services/todos.service";
 import "./page.css";
 
 const Page = () => {
@@ -17,30 +16,40 @@ const Page = () => {
     })
     await refetch();
   });
+  const updateMutation = useMutation(async ({ text, completed }) => {
+    await updateTodo({ text, completed });
+    await refetch();
+  });
+  const deleteMutation = useMutation(async (id) => {
+    await deleteTodo(id);
+    await refetch();
+  })
   const { register, handleSubmit, formState: { errors } } = useForm();
   return (
-    <div>
-      <h1>Todos</h1>
+    <div className="todos-page">
+      <h1 className="title">Todo List</h1>
       <Helmet>
-        <title>Todos</title>
+        <title>Todo List</title>
       </Helmet>
-      <div>
-        <ul>
-          {data.map((item) => (
-            <Todo key={item.id} todo={item} />
-          ))}
-        </ul>
+      <div className="container">
+        <p className="subtitle">Share this page to collaborate with others.</p>
         <form onSubmit={handleSubmit(mutate)}>
           <TextField isRequired isReadOnly={isMutating}>
-            <Label>Text (required)</Label>
-            <Input {...register('text')} />
+            <Input {...register('text')} placeholder="Add a todo item" />
             {err?.text && <p>{err.text._errors[0]}</p>}
           </TextField>
-          <Button type="submit" isDisabled={isMutating}>Add Todo</Button>
-          {isMutating && <div>
-            <p>Creating...</p>
-          </div>}
+          <Button className="add-button" type="submit" isDisabled={isMutating}>Add</Button>
         </form>
+        <ul>
+          {data.map((item) => (
+            <Todo
+              key={item.id}
+              item={item}
+              updateMutation={updateMutation}
+              deleteMutation={deleteMutation}
+            />
+          ))}
+        </ul>
       </div>
     </div>
   )

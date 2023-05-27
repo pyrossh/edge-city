@@ -1,14 +1,22 @@
 import React, { useState } from "react";
+import { Button } from 'react-aria-components';
+import "./Counter.css";
 
 const Counter = () => {
   const [count, setCount] = useState(5);
+  const increment = () => setCount(count - 1);
+  const decrement = () => setCount(count + 1);
   return (
-    <div>
-      <button onClick={() => setCount(count - 1)}>-</button>
+    <div className="counter">
+      <Button className="button" onClick={increment}>
+        -
+      </Button>
       <span className="count">
         {count}
       </span>
-      <button onClick={() => setCount(count + 1)}>+</button>
+      <Button className="button" onClick={decrement}>
+        +
+      </Button>
     </div>
   )
 }

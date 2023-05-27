@@ -1,94 +1,67 @@
-import { useState } from "react";
-// import PropTypes from 'prop-types';
-// import { Button, InputGroup } from "@blueprintjs/core";
-// import useMutation from '@/hooks/useMutation';
-// import { TodoPropType } from '@/models/Todo';
+import { useState, useCallback } from "react";
 import "./Todo.css";
 
-// const propTypes = {
-//   // todo: PropTypes.shape(TodoPropType).isRequired,
-// }
-
-const Todo = ({ todo }) => {
-  const [state, setState] = useState({ text: todo.text, editing: false });
-  // const updateMutation = useMutation(async (data) => {
-  //   await onUpdate({ ...todo, ...data });
-  //   await refetch();
-  // });
-  // const deleteMutation = useMutation(async () => {
-  //   await onDelete(todo.id);
-  //   await refetch();
-  // })
+const Todo = ({ item, updateMutation, deleteMutation }) => {
+  const [editing, setEditing] = useState(false);
+  const doSave = useCallback(() => {
+    if (!input.current) return;
+    setBusy(true);
+    save(item, input.current.value, item.completed);
+  }, [item]);
+  const cancelEdit = useCallback(() => {
+    if (!input.current) return;
+    setEditing(false);
+    input.current.value = item.text;
+  }, []);
+  const doDelete = useCallback(() => {
+    const yes = confirm("Are you sure you want to delete this item?");
+    if (!yes) return;
+    setBusy(true);
+    save(item, null, item.completed);
+  }, [item]);
+  const doSaveCompleted = useCallback((completed) => {
+    setBusy(true);
+    save(item, item.text, completed);
+  }, [item]);
   return (
     <li className="todo">
-      {!state.editing && (
-        <label>
+      {!editing && (
+        <>
+          <input type="checkbox" />
+          <div class="text">
+            <p>{item.text}</p>
+            <p className="timestamp">{item.createdAt}</p>
+          </div>
+          <button className="edit-button" title="Edit">✏️</button>
+          <button class="delete-button" title="Delete">🗑️</button>
+        </>
+      )}
+      {editing && (
+        <>
           <input
-            type="checkbox"
-            checked={todo.completed}
-            onChange={(e) => {
-              // updateMutation.mutate({ completed: e.target.checked })
-            }}
-          />{" "}
-          <span className={todo.completed ? "done" : undefined}>{todo.text}</span>{" "}
-        </label>
+            class="border rounded w-full py-2 px-3 mr-4"
+            defaultValue={item.text}
+          />
+          <button
+            class="p-2 rounded mr-2 disabled:opacity-50"
+            title="Save"
+            onClick={doSave}
+            disabled={busy}
+          >
+            💾
+          </button>
+          <button
+            class="p-2 rounded disabled:opacity-50"
+            title="Cancel"
+            onClick={cancelEdit}
+            disabled={busy}
+          >
+            🚫
+          </button>
+        </>
       )}
-
-      {/* {state.editing && (
-        <InputGroup
-          autoFocus
-          value={state.text}
-          onChange={(e) => setState({ text: e.target.value, editing: true })}
-          onKeyDown={async (e) => {
-            if (e.key === "Enter") {
-              await updateMutation.mutate({ text: state.text });
-              setState({ text: todo.text, editing: false });
-            } else if (e.key === "Escape") {
-              setState({ text: todo.text, editing: false });
-            }
-          }}
-        />
-      )}
-
-      <span>
-        {!todo.completed && !state.editing && (
-          <Button
-            onClick={() => setState({ text: todo.text, editing: true })}
-          >
-            Edit
-          </Button>
-        )}
-
-        {todo.completed && (
-          <Button loading={deleteMutation.isMutating} onClick={deleteMutation.mutate}>
-            Delete
-          </Button>
-        )}
-
-        {state.editing && state.text !== todo.text && (
-          <Button
-            loading={updateMutation.isMutating}
-            onClick={async () => {
-              await updateMutation.mutate({ text: state.text });
-              setState({ text: todo.text, editing: false });
-            }}
-          >
-            Save
-          </Button>
-        )}
-
-        {state.editing && (
-          <Button
-            onClick={() => setState({ text: todo.text, editing: false })}
-          >
-            Cancel
-          </Button>
-        )}
-      </span> */}
     </li>
   );
 };
-
-// Todo.propTypes = propTypes;
 
 export default Todo;
