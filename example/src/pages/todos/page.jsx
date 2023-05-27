@@ -7,7 +7,7 @@ import Todo from "@/components/Todo/Todo";
 import { getTodos, createTodo, updateTodo, deleteTodo } from "@/services/todos.service";
 import "./page.css";
 
-const Page = () => {
+export default function Page() {
   const { data, refetch } = useQuery("todos", () => getTodos());
   const { mutate, isMutating, err } = useMutation(async ({ text }) => {
     await createTodo({
@@ -54,5 +54,3 @@ const Page = () => {
     </div>
   )
 }
-
-export default Page;

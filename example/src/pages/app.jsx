@@ -2,7 +2,7 @@ import { SSRProvider } from 'react-aria';
 import Layout from '@/components/Layout/Layout';
 import "./app.css";
 
-const App = ({ children }) => {
+export default function App({ children }) {
   return (
     <SSRProvider>
       <Layout>
@@ -11,5 +11,3 @@ const App = ({ children }) => {
     </SSRProvider>
   )
 }
-
-export default App;

@@ -4,7 +4,7 @@ import Counter from "@/components/Counter/Counter";
 import { Helmet } from 'react-helmet-async';
 import "./page.css";
 
-const Page = () => {
+export default function Page() {
   const router = useRouter();
   return (
     <div>
@@ -20,6 +20,4 @@ const Page = () => {
       </div>
     </div>
   )
-}
-
-export default Page;
+};

@@ -3,7 +3,7 @@ import { Link, useRouter } from "edge-city";
 import { Helmet } from 'react-helmet-async';
 import "./page.css";
 
-export const Page = () => {
+export default function Page() {
   const router = useRouter();
   return (
     <div className="about-page">
@@ -24,5 +24,3 @@ export const Page = () => {
     </div>
   )
 }
-
-export default Page;

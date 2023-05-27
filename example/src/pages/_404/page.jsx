@@ -2,7 +2,7 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import "./page.css";
 
-const Page = () => {
+export default function Page() {
   return (
     <div className="notfound-page">
       <Helmet>
@@ -15,5 +15,3 @@ const Page = () => {
     </div>
   )
 }
-
-export default Page;
