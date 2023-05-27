@@ -12,7 +12,7 @@ During development each request for a page is executed in a separate edge-runtim
 During production each page is packaged to an esm function adapted to the platform of your choice.  
 
 ## Why?
-* Its really hard to have a streaming SSR + CSR with automatic data rehydration setup in nextjs currently.  
+* Its really hard to have a streaming SSR + CSR with automatic data rehydration setup in nextjs 13.  
 * There is no meta-framework which runs your code in an edge simulated environment during development.  
 
 ## Requirements
@@ -21,8 +21,8 @@ During production each page is packaged to an esm function adapted to the platfo
 3. `vercel` for deploying to vercel edge runtime
 
 ## DB access
-Since it runs only on edge runtimes which have access to only fetch and websocket web API's, you have to use database drivers
-which are compatible with these API's. Here is a list of some of them,
+Since it runs only on edge runtimes which run in a constrained browser environment, you have to use database drivers
+which can run in the browser, basically utilize Ajax/Fetch/Websocket. Here is a list of some of them,
 
 * [NeonDB serverless driver](https://github.com/neondatabase/serverless) - postgres
 * [Platnetscale serverless driver](https://planetscale.com/docs/tutorials/planetscale-serverless-driver) - mysql
@@ -47,5 +47,4 @@ which are compatible with these API's. Here is a list of some of them,
 5. Maybe move to vite for HMR goodness
 
 ### Todo[Cloudflare]
-1. Fix 404/500 pages not routing on server
-2. Fix neondb serverless driver
+1. Fix 404 pages not routing on server

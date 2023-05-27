@@ -1,9 +1,12 @@
 import { SSRProvider } from 'react-aria';
+import Layout from '@/components/Layout/Layout';
 
 const App = ({ children }) => {
   return (
     <SSRProvider>
-      {children}
+      <Layout>
+        {children}
+      </Layout>
     </SSRProvider>
   )
 }
