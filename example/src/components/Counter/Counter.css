@@ -1,7 +1,0 @@
-.counter {
-  & .button {
-    border-radius: 0.25rem;
-    padding: 1rem;
-    margin-left: 0.5rem;
-  }
-}

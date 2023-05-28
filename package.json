@@ -37,7 +37,9 @@
     "react": "*",
     "react-dom": "*",
     "react-error-boundary": "*",
-    "react-helmet-async": "*"
+    "react-helmet-async": "*",
+    "styled-components": "*",
+    "@stitches/react": "*"
   },
   "bin": {
     "edge-city": "cli.js"

@@ -1,8 +1,13 @@
 import React from "react";
 import { useRouter } from "edge-city";
-import Counter from "@/components/Counter/Counter";
 import { Helmet } from "react-helmet-async";
+import { styled } from '@/theme';
+import Counter from "@/components/Counter/Counter";
 import "./page.css";
+
+const Heading = styled("h1", {
+  color: "$primary",
+})
 
 export default function Page() {
   const router = useRouter();
@@ -12,7 +17,7 @@ export default function Page() {
         <title>Edge City</title>
       </Helmet>
       <div className="home-page">
-        <h1>Home Page</h1>
+        <Heading>Home Page</Heading>
         <p>Path: {router.pathname}</p>
         <Counter />
       </div>

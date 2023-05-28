@@ -114,13 +114,14 @@ const bundlePages = async () => {
           const newSrc = `
             import renderPage from "edge-city/renderPage";
             import init from "@/init";
+            import { getCssText } from "@/theme";
             ${importAppComp}
 
             ${data.toString()}
 
             export async function onRequest(context) {
               await init();
-              return renderPage(Page, App, context.request);
+              return renderPage(getCssText, Page, App, context.request);
             }
           `
           return {

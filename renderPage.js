@@ -3,12 +3,13 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 import { createMemoryHistory } from "history";
 import { createRouter } from "radix3";
 import { renderToReadableStream } from "react-dom/server";
+import { renderStyles } from "./renderStyles";
 import isbot from "isbot";
 import routemap from '/routemap.json' assert {type: 'json'};
 import { RouterProvider } from "./index";
 
 const stringToStream = (str) => {
-  return new ReadableStream({
+  const stream = new ReadableStream({
     start(controller) {
       controller.enqueue(new TextEncoder().encode(str))
       controller.close()
@@ -91,7 +92,7 @@ const render = async (children, {
   }
 
   try {
-    const reactStream = await renderToReadableStream(children)
+    const reactStream = await renderToReadableStream(children);
     if (isSeo) {
       await reactStream.allReady;
     }
@@ -101,7 +102,7 @@ const render = async (children, {
   }
 }
 
-const renderPage = async (Page, App, req) => {
+const renderPage = async (getCssText, Page, App, req) => {
   const url = new URL(req.url);
   const history = createMemoryHistory({
     initialEntries: [url.pathname + url.search],
@@ -122,9 +123,11 @@ const renderPage = async (Page, App, req) => {
       children: [
         _jsxs("head", {
           children: [
-            _jsx("link", {
-              rel: "stylesheet",
-              href: "/css/app.css"
+            _jsx("style", {
+              id: "stitches",
+              dangerouslySetInnerHTML: {
+                __html: getCssText(),
+              }
             }),
           ]
         }),
@@ -138,7 +141,7 @@ const renderPage = async (Page, App, req) => {
                 rpcContext,
                 helmetContext,
                 App,
-              }),
+              })
             ]
           })
         })]
