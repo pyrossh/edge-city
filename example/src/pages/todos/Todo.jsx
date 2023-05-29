@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react";
-import "./Todo.css";
 
 const Todo = ({ item, updateMutation, deleteMutation }) => {
   const [editing, setEditing] = useState(false);
@@ -69,3 +68,37 @@ const Todo = ({ item, updateMutation, deleteMutation }) => {
 };
 
 export default Todo;
+
+// .todo {
+//   display: flex;
+//   border-bottom-width: 1px;
+//   border-color: #d1d5db;
+//   align-items: center;
+//   height: 4rem;
+//   margin-bottom: 0.5rem;
+//   margin-top: 0.5rem;
+
+//   & .text {
+//     display: flex;
+//     flex: 1;
+//     flex-direction: column;
+//     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+//       "Courier New", monospace;
+//     margin-left: 0.5rem;
+//   }
+
+//   & .timestamp {
+//     line-height: 2;
+//     opacity: 0.5;
+//     font-size: 0.75rem;
+//   }
+
+//   & .edit-button {
+//     padding: 0.5rem;
+//     margin-right: 0.5rem;
+//   }
+
+//   & .delete-button {
+//     padding: 0.5rem;
+//   }
+// }

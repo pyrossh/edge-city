@@ -1,9 +1,8 @@
 import React, {
-  Suspense, createContext, useContext, useState, useEffect, useTransition, useCallback
+  createContext, useContext, useState, useEffect, useTransition, useCallback
 } from "react";
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { HelmetProvider } from 'react-helmet-async';
-import { ErrorBoundary } from "react-error-boundary";
 import { createBrowserHistory } from "history";
 import { createRouter } from "radix3";
 import routemap from '/routemap.json' assert {type: 'json'};
@@ -136,16 +135,9 @@ export const RouterProvider = ({ router, history, rpcContext, helmetContext, App
       context: helmetContext,
       children: _jsx(RpcContext.Provider, {
         value: rpcContext,
-        children: _jsx(ErrorBoundary, {
-          onError: (err) => console.log(err),
-          fallback: _jsx("p", {}, "Oops something went wrong"),
-          children: _jsx(Suspense, {
-            fallback: _jsx("p", {}, "Loading..."),
-            children: _jsx(App, {
-              children: _jsx(page, {}),
-            })
-          }),
-        }),
+        children: _jsx(App, {
+          children: _jsx(page, {}),
+        })
       }),
     }),
   })

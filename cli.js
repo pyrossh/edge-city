@@ -211,7 +211,6 @@ const bundleServices = async () => {
         isServer: true,
         write: false,
         entryPoints: [s],
-        // outfile: `build/functions/_rpc${dest}.js`,
       },
         {
           name: "service-plugin",

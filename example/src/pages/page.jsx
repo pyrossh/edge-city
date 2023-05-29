@@ -2,11 +2,19 @@ import React from "react";
 import { useRouter } from "edge-city";
 import { Helmet } from "react-helmet-async";
 import { styled } from '@/theme';
-import Counter from "@/components/Counter/Counter";
-import "./page.css";
+import Counter from "@/pages/Counter";
 
 const Heading = styled("h1", {
   color: "$primary",
+})
+
+const Container = styled("div", {
+  "& .count": {
+    color: "black",
+    padding: "40px",
+    fontSize: "30px",
+    fontWeight: 600,
+  }
 })
 
 export default function Page() {
@@ -16,11 +24,11 @@ export default function Page() {
       <Helmet>
         <title>Edge City</title>
       </Helmet>
-      <div className="home-page">
+      <Container>
         <Heading>Home Page</Heading>
         <p>Path: {router.pathname}</p>
         <Counter />
-      </div>
+      </Container>
     </div>
   );
 }

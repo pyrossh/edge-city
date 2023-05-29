@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { SSRProvider } from "react-aria";
+import { ErrorBoundary } from "react-error-boundary";
 import { Link } from "edge-city";
 import { styled } from '@/theme';
 import "./normalize.css";
@@ -33,6 +35,7 @@ const Content = styled("div", {
 })
 
 export default function App({ children }) {
+  console.log("render");
   return (
     <SSRProvider>
       <Container>
@@ -41,7 +44,13 @@ export default function App({ children }) {
           <Link href="/about">About us</Link>
           <Link href="/todos">Todos</Link>
         </Sidebar>
-        <Content>{children}</Content>
+        <Content>
+          <ErrorBoundary onError={(err) => console.log(err)} fallback={<p>Oops something went wrong</p>}>
+            <Suspense fallback={<p>Loading...</p>}>
+              {children}
+            </Suspense>
+          </ErrorBoundary>
+        </Content>
       </Container>
     </SSRProvider>
   );

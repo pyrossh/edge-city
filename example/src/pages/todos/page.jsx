@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation } from "edge-city";
 import { useForm } from "react-hook-form";
 import { Button, TextField, Input } from "react-aria-components";
-import Todo from "@/components/Todo/Todo";
+import Todo from "@/pages/todos/Todo";
 import { getTodos, createTodo, updateTodo, deleteTodo } from "@/services/todos.service";
 import "./page.css";
 
