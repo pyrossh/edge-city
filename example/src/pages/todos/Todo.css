@@ -16,6 +16,17 @@
     margin-left: 0.5rem;
   }
 
+  & form {
+    display: flex;
+    flex: 1;
+
+    & .text-input {
+      display: flex;
+      flex: 1;
+      margin-right: 0.5rem;
+    }
+  }
+
   & .timestamp {
     line-height: 2;
     opacity: 0.5;

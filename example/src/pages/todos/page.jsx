@@ -1,34 +1,29 @@
-import React from "react";
+import { Suspense } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 import { Helmet } from "react-helmet-async";
-import { useQuery, useMutation } from "edge-city";
+import { useMutation, useRpcCache } from "edge-city";
 import { useForm } from "react-hook-form";
 import { Button, TextField, Input } from "react-aria-components";
-import Todo from "@/components/Todo/Todo";
-import { getTodos, createTodo, updateTodo, deleteTodo } from "@/services/todos.service";
+import TodoList from "./TodoList";
+import { createTodo } from "@/services/todos.service";
 import "./page.css";
 
 export default function Page() {
-  const { data, refetch } = useQuery("todos", () => getTodos());
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm();
+  const { invalidate } = useRpcCache("todos");
   const { mutate, isMutating, err } = useMutation(async ({ text }) => {
     await createTodo({
       text,
       completed: false,
     });
-    await refetch();
+    await invalidate();
+    reset();
   });
-  const updateMutation = useMutation(async ({ text, completed }) => {
-    await updateTodo({ text, completed });
-    await refetch();
-  });
-  const deleteMutation = useMutation(async (id) => {
-    await deleteTodo(id);
-    await refetch();
-  });
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm();
   return (
     <div className="todos-page">
       <h1 className="title">Todo List</h1>
@@ -46,16 +41,11 @@ export default function Page() {
             Add
           </Button>
         </form>
-        <ul>
-          {data.map((item) => (
-            <Todo
-              key={item.id}
-              item={item}
-              updateMutation={updateMutation}
-              deleteMutation={deleteMutation}
-            />
-          ))}
-        </ul>
+        <ErrorBoundary onError={(err) => console.log(err)} fallback={<p>Oops something went wrong</p>}>
+          <Suspense fallback={<p>Loading...</p>}>
+            <TodoList isMutating={isMutating} />
+          </Suspense>
+        </ErrorBoundary>
       </div>
     </div>
   );

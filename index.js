@@ -1,5 +1,5 @@
 import React, {
-  Suspense, createContext, useContext, useState, useEffect, useTransition, useCallback
+  Suspense, createContext, useContext, useState, useEffect, useTransition, useCallback, useRef
 } from "react";
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { HelmetProvider } from 'react-helmet-async';
@@ -40,20 +40,22 @@ export const useInvalidate = () => {
 
 export const useRpcCache = (k) => {
   const ctx = useContext(RpcContext);
-  const [_, rerender] = useState(false);
-  const get = () => ctx[k]
+  if (isClient() && !ctx.subs[k]) {
+    ctx.subs[k] = new Set();
+  }
+  const get = () => ctx.data[k]
   const set = (v) => {
-    ctx[k] = v;
-    rerender((c) => !c);
+    ctx.data[k] = v;
   }
-  const invalidate = () => {
-    delete ctx[k];
-    rerender((c) => !c);
-  }
+  const invalidate = () => Promise.all(Array.from(ctx.subs[k]).map((cb) => cb()))
   return {
     get,
     set,
     invalidate,
+    onInvalidated: (cb) => {
+      ctx.subs[k].add(cb)
+      return () => ctx.subs[k].delete(cb);
+    }
   }
 }
 
@@ -66,7 +68,7 @@ export const useRpcCache = (k) => {
 export const useQuery = (key, fn) => {
   const [isRefetching, setIsRefetching] = useState(false);
   const [err, setErr] = useState(null);
-  const cache = useRpcCache(key);
+  const cache = useRpcCache(key, fn);
   const refetch = useCallback(async () => {
     try {
       setIsRefetching(true);
@@ -79,6 +81,9 @@ export const useQuery = (key, fn) => {
       setIsRefetching(false);
     }
   }, [fn]);
+  useEffect(() => {
+    return cache.onInvalidated(refetch);
+  }, [key])
   const value = cache.get();
   if (value) {
     if (value instanceof Promise) {
@@ -132,19 +137,15 @@ export const RouterProvider = ({ router, history, rpcContext, helmetContext, App
       history,
       params: page.params || {},
     },
-    children: _jsx(HelmetProvider, {
-      context: helmetContext,
-      children: _jsx(RpcContext.Provider, {
-        value: rpcContext,
-        children: _jsx(ErrorBoundary, {
-          onError: (err) => console.log(err),
-          fallback: _jsx("p", {}, "Oops something went wrong"),
-          children: _jsx(Suspense, {
-            fallback: _jsx("p", {}, "Loading..."),
-            children: _jsx(App, {
-              children: _jsx(page, {}),
-            })
-          }),
+    children: _jsx(Suspense, {
+      fallback: _jsx("div", {}, "Routing...."),
+      children: _jsx(HelmetProvider, {
+        context: helmetContext,
+        children: _jsx(RpcContext.Provider, {
+          value: rpcContext,
+          children: _jsx(App, {
+            children: _jsx(page, {}),
+          })
         }),
       }),
     }),

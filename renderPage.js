@@ -115,7 +115,7 @@ const renderPage = async (Page, App, req) => {
   });
   const jsScript = url.pathname === "/" ? "/index" : url.pathname;
   const helmetContext = {};
-  const rpcContext = {};
+  const rpcContext = { data: {}, subs: {} };
   const stream = await render(
     _jsxs("html", {
       lang: "en",

@@ -1,4 +1,4 @@
-import { eq, asc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { boolean, date, pgTable, serial, text } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
@@ -16,16 +16,27 @@ export const createSchema = z.object({
 });
 
 const updateSchema = z.object({
+  id: z.number().positive().int("must be an integer"),
   text: z.string().nonempty("please enter some text"),
   completed: z.boolean(),
 });
 
 export const getTodos = async () => {
-  return await db.select().from(todos).orderBy(asc(todos.id));
+  await new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, 2000)
+  });
+  return await db.select().from(todos).orderBy(desc(todos.id));
 };
 
 /** @param {z.infer<typeof createSchema>} params */
 export const createTodo = async (params) => {
+  await new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, 2000)
+  });
   const item = createSchema.parse(params);
   item.createdAt = new Date();
   return await db.insert(todos).values(item).returning();

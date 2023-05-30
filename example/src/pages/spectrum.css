@@ -373,9 +373,8 @@
   --focus-ring-color: slateblue;
   --invalid-color: var(--spectrum-global-color-red-600);
   display: flex;
-  flex-direction: column;
-  width: fit-content;
   flex: 1;
+  flex-direction: column;
 
   .react-aria-Input {
     margin: 0;
