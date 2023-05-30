@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { SSRProvider } from "react-aria";
 import Layout from "@/components/Layout/Layout";
 import "./normalize.css";
@@ -9,9 +8,7 @@ export default function App({ children }) {
   return (
     <SSRProvider>
       <Layout>
-        <Suspense fallback={<p>Loading...</p>}>
-          {children}
-        </Suspense>
+        {children}
       </Layout>
     </SSRProvider>
   );
