@@ -34,7 +34,7 @@ export default function Page() {
         <p className="subtitle">Share this page to collaborate with others.</p>
         <form onSubmit={handleSubmit(mutate)}>
           <TextField isRequired isReadOnly={isMutating} aria-label="add-todo">
-            <Input {...register("text")} placeholder="Add a todo item" />
+            <Input id="text" aria-labelledby="text" aria-describedby="text" {...register("text")} placeholder="Add a todo item" />
             {err?.text && <p>{err.text._errors[0]}</p>}
           </TextField>
           <Button className="add-button" type="submit" isDisabled={isMutating}>

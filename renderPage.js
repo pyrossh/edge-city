@@ -150,7 +150,7 @@ const renderPage = async (Page, App, req) => {
     injectOnEnd: () => {
       return ''
         + `<script>globalThis._EDGE_DATA_ = ${JSON.stringify(globalThis._EDGE_DATA_)};</script>`
-        + `<script type="module" src="/js${jsScript}.js?hydrate=true" defer></script>`
+        + `<script type="module" src="/js${jsScript}.js?hydrate=true"></script>`
     }
   });
   return new Response(stream, {
