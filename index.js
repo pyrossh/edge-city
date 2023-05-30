@@ -1,9 +1,8 @@
 import React, {
-  Suspense, createContext, useContext, useState, useEffect, useTransition, useCallback, useRef
+  Suspense, createContext, useContext, useState, useEffect, useTransition, useCallback
 } from "react";
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { HelmetProvider } from 'react-helmet-async';
-import { ErrorBoundary } from "react-error-boundary";
 import { createBrowserHistory } from "history";
 import { createRouter } from "radix3";
 import routemap from '/routemap.json' assert {type: 'json'};
@@ -24,38 +23,18 @@ export const defineRpc = (serviceName) => async (params = {}) => {
   return await res.json();
 }
 
-export const RpcContext = createContext(undefined);
-
-// global way to refresh maybe without being tied to a hook like refetch
-export const useInvalidate = () => {
-  const ctx = useContext(RpcContext);
-  return (regex) => {
-    Object.keys(ctx)
-      .filter((k) => regex.test(k))
-      .forEach((k) => {
-        delete ctx[k];
-      });
-  }
-}
-
-export const useRpcCache = (k) => {
-  const ctx = useContext(RpcContext);
-  if (isClient() && !ctx.subs[k]) {
-    ctx.subs[k] = new Set();
-  }
-  const get = () => ctx.data[k]
-  const set = (v) => {
-    ctx.data[k] = v;
-  }
-  const invalidate = () => Promise.all(Array.from(ctx.subs[k]).map((cb) => cb()))
-  return {
-    get,
-    set,
-    invalidate,
-    onInvalidated: (cb) => {
-      ctx.subs[k].add(cb)
-      return () => ctx.subs[k].delete(cb);
+export const cache = {
+  get: (k) => globalThis._EDGE_DATA_.data[k],
+  set: (k, v) => {
+    globalThis._EDGE_DATA_.data[k] = v;
+  },
+  invalidate: (k, setRefetch) => Promise.all(Array.from(globalThis._EDGE_DATA_.subs[k]).map((cb) => cb(setRefetch))),
+  subscribe: (k, cb) => {
+    if (!globalThis._EDGE_DATA_.subs[k]) {
+      globalThis._EDGE_DATA_.subs[k] = new Set();
     }
+    globalThis._EDGE_DATA_.subs[k].add(cb)
+    return () => globalThis._EDGE_DATA_.subs[k].delete(cb);
   }
 }
 
@@ -66,25 +45,31 @@ export const useRpcCache = (k) => {
  * @returns 
  */
 export const useQuery = (key, fn) => {
+  const [, toggle] = useState(false);
   const [isRefetching, setIsRefetching] = useState(false);
   const [err, setErr] = useState(null);
-  const cache = useRpcCache(key, fn);
-  const refetch = useCallback(async () => {
+  const refetch = useCallback(async (setRefetch = true) => {
     try {
-      setIsRefetching(true);
+      if (setRefetch) {
+        setIsRefetching(true);
+      }
       setErr(null);
-      cache.set(await fn());
+      cache.set(key, await fn());
     } catch (err) {
       setErr(err);
       throw err;
     } finally {
-      setIsRefetching(false);
+      if (setRefetch) {
+        setIsRefetching(false);
+      } else {
+        toggle((v) => !v);
+      }
     }
   }, [fn]);
   useEffect(() => {
-    return cache.onInvalidated(refetch);
+    return cache.subscribe(key, refetch);
   }, [key])
-  const value = cache.get();
+  const value = cache.get(key);
   if (value) {
     if (value instanceof Promise) {
       throw value;
@@ -93,8 +78,8 @@ export const useQuery = (key, fn) => {
     }
     return { data: value, isRefetching, err, refetch };
   }
-  cache.set(fn().then((v) => cache.set(v)));
-  throw cache.get();
+  cache.set(key, fn().then((v) => cache.set(key, v)));
+  throw cache.get(key);
 }
 
 export const useMutation = (fn) => {
@@ -120,7 +105,7 @@ export const useMutation = (fn) => {
 }
 
 export const RouterContext = createContext(undefined);
-export const RouterProvider = ({ router, history, rpcContext, helmetContext, App }) => {
+export const RouterProvider = ({ router, history, helmetContext, App }) => {
   const [_, startTransition] = useTransition();
   const [pathname, setPathname] = useState(history.location.pathname);
   const page = router.lookup(pathname) || router.lookup("/_404");
@@ -141,12 +126,9 @@ export const RouterProvider = ({ router, history, rpcContext, helmetContext, App
       fallback: _jsx("div", {}, "Routing...."),
       children: _jsx(HelmetProvider, {
         context: helmetContext,
-        children: _jsx(RpcContext.Provider, {
-          value: rpcContext,
-          children: _jsx(App, {
-            children: _jsx(page, {}),
-          })
-        }),
+        children: _jsx(App, {
+          children: _jsx(page, {}),
+        })
       }),
     }),
   })

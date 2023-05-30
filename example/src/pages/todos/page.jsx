@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { Helmet } from "react-helmet-async";
-import { useMutation, useRpcCache } from "edge-city";
+import { cache, useMutation } from "edge-city";
 import { useForm } from "react-hook-form";
 import { Button, TextField, Input } from "react-aria-components";
+import Spinner from "@/components/Spinner/Spinner";
 import TodoList from "./TodoList";
 import { createTodo } from "@/services/todos.service";
 import "./page.css";
@@ -15,13 +16,12 @@ export default function Page() {
     reset,
     formState: { errors },
   } = useForm();
-  const { invalidate } = useRpcCache("todos");
   const { mutate, isMutating, err } = useMutation(async ({ text }) => {
     await createTodo({
       text,
       completed: false,
     });
-    await invalidate();
+    await cache.invalidate("todos");
     reset();
   });
   return (
@@ -41,8 +41,8 @@ export default function Page() {
             Add
           </Button>
         </form>
-        <ErrorBoundary onError={(err) => console.log(err)} fallback={<p>Oops something went wrong</p>}>
-          <Suspense fallback={<p>Loading...</p>}>
+        <ErrorBoundary onError={(err) => console.log("err", err)} fallback={<p>Oops something went wrong</p>}>
+          <Suspense fallback={<Spinner />}>
             <TodoList isMutating={isMutating} />
           </Suspense>
         </ErrorBoundary>

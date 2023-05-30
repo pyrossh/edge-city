@@ -115,7 +115,7 @@ const renderPage = async (Page, App, req) => {
   });
   const jsScript = url.pathname === "/" ? "/index" : url.pathname;
   const helmetContext = {};
-  const rpcContext = { data: {}, subs: {} };
+  globalThis._EDGE_DATA_ = { data: {}, subs: {} };
   const stream = await render(
     _jsxs("html", {
       lang: "en",
@@ -135,7 +135,6 @@ const renderPage = async (Page, App, req) => {
               _jsx(RouterProvider, {
                 history,
                 router,
-                rpcContext,
                 helmetContext,
                 App,
               }),
@@ -150,7 +149,7 @@ const renderPage = async (Page, App, req) => {
         .join(''),
     injectOnEnd: () => {
       return ''
-        + `<script>window._EDGE_DATA_ = ${JSON.stringify(rpcContext)};</script>`
+        + `<script>globalThis._EDGE_DATA_ = ${JSON.stringify(globalThis._EDGE_DATA_)};</script>`
         + `<script type="module" src="/js${jsScript}.js?hydrate=true" defer></script>`
     }
   });
