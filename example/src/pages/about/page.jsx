@@ -1,5 +1,6 @@
 import React from "react";
-import { Link, useRouter } from "edge-city";
+import Link from "edge-city/link";
+import { useRouter } from "edge-city/router";
 import { Helmet } from "react-helmet-async";
 import "./page.css";
 

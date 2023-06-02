@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { TextField, Input } from "react-aria-components";
-import { cache, useMutation } from "edge-city";
+import { cache, useMutation } from "edge-city/data";
 import { updateTodo, deleteTodo } from "@/services/todos.service";
 import "./Todo.css";
 

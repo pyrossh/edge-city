@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { Helmet } from "react-helmet-async";
-import { cache, useMutation } from "edge-city";
+import { cache, useMutation } from "edge-city/data";
 import { useForm } from "react-hook-form";
 import { Button, TextField, Input } from "react-aria-components";
 import Spinner from "@/components/Spinner/Spinner";

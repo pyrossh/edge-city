@@ -1,5 +1,5 @@
 import React from "react";
-import { useQuery } from "edge-city";
+import { useQuery } from "edge-city/data";
 import { getTodos } from "@/services/todos.service";
 import Spinner from "@/components/Spinner/Spinner";
 import Todo from "./Todo";

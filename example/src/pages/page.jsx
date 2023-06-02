@@ -1,5 +1,5 @@
 import React from "react";
-import { useRouter } from "edge-city";
+import { useRouter } from "edge-city/router";
 import Counter from "@/components/Counter/Counter";
 import { Helmet } from "react-helmet-async";
 import "./page.css";
