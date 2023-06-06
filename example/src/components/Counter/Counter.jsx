@@ -8,11 +8,11 @@ const Counter = () => {
   const decrement = () => setCount(count + 1);
   return (
     <div className="counter">
-      <Button onClick={increment}>
+      <Button onPress={increment}>
         -
       </Button>
       <span className="count">{count}</span>
-      <Button onClick={decrement}>
+      <Button onPress={decrement}>
         +
       </Button>
     </div>

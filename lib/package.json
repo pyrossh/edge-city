@@ -2,7 +2,7 @@
   "name": "edge-city",
   "version": "0.5.0",
   "type": "module",
-  "main": "index.js",
+  "main": "client",
   "engines": {
     "node": ">= 20"
   },
